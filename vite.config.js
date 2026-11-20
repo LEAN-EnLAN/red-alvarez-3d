@@ -2,8 +2,13 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: './',
-  build: { target: 'es2022', chunkSizeWarningLimit: 900 },
+  // Vercel: landing en /, demo en /demo/. Artifact (vista previa): solo la demo, rutas relativas.
+  base: process.env.ARTIFACT ? './' : '/',
+  build: {
+    target: 'es2022',
+    chunkSizeWarningLimit: 900,
+    rollupOptions: { input: process.env.ARTIFACT ? { demo: 'demo/index.html' } : { main: 'index.html', demo: 'demo/index.html' } },
+  },
   plugins: [
     process.env.ARTIFACT ? null : VitePWA({
       registerType: 'autoUpdate',
@@ -16,7 +21,8 @@ export default defineConfig({
         background_color: '#0b1220',
         display: 'fullscreen',
         orientation: 'any',
-        start_url: './',
+        start_url: '/demo/',
+        scope: '/',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
