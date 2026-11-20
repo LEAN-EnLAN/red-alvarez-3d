@@ -6,7 +6,8 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as D from './devices.js';
 import { META, DESKS, DEVICES, OUTLETS, MEETING, UPS, VLANS, FIBER_COLOR, TRUNK_COLOR, FIBER_ROUTE } from '../data/tp.js';
 import { v3, roundPolyline, sagCurve, dedupe, tubeFrom, pointsOfTube } from './paths.js';
-import { pbrSet } from './textures.js';
+import { pbrSet, textCanvas } from './textures.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const H = META.size.h;
 const PLENUM = H + 0.14;
@@ -90,25 +91,6 @@ export async function furnish(scene, colliders, { manager, quality }) {
   const woodTop = pbrSet('kitchen_wood', { repeat: 1 });
   const cabMat = new THREE.MeshStandardMaterial({ color: 0xe9e6df, roughness: 0.6 });
   const cabTop = new THREE.MeshStandardMaterial({ map: woodTop.map, roughness: 0.55 });
-  // mueble bajo (cajonera) para impresoras
-  const lowCabinet = (x, z, w, d, h) => {
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.03, d), cabMat);
-    body.position.y = (h - 0.03) / 2;
-    const top = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.03, d + 0.02), cabTop);
-    top.position.y = h - 0.015;
-    g.add(body, top);
-    for (let i = 0; i < 2; i++) {
-      const handle = new THREE.Mesh(new THREE.BoxGeometry(w * 0.4, 0.012, 0.012), new THREE.MeshStandardMaterial({ color: 0x555b63, metalness: 0.7, roughness: 0.3 }));
-      handle.position.set(0, h * (0.32 + i * 0.36), d / 2 + 0.006);
-      g.add(handle);
-    }
-    g.position.set(x, 0, z);
-    g.traverse((o) => { if (o.isMesh) { o.castShadow = quality.shadows; o.receiveShadow = true; } });
-    root.add(g);
-    colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
-    return h;
-  };
   const hasSF = (n) => manifest[`sf_${n}`];
 
   // ════════════════════ RACKS ════════════════════
@@ -126,63 +108,107 @@ export async function furnish(scene, colliders, { manager, quality }) {
   }
 
   // ════════════════════ PUESTOS ════════════════════
+  // Cada escritorio se apoya contra la pared más cercana de su sala (posición del plano p.2 como
+  // referencia). La caja de bocas va en la pared y la canaleta sube pegada a la pared al cielorraso.
   const deskBuilt = new Map();
-  const outletPole = new Map(); // dev -> {top:[x,z], plate}
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0xf4f4f2, roughness: 0.55, transparent: true, opacity: 1 });
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0xf6f6f4, roughness: 0.5, transparent: true, opacity: 1 });
+  const WT = 0.06; // media pared
+  const DESK_LAYOUT = {
+    PC01: { wall: 'x', at: 0, dir: 1, along: 10.2 },
+    PC02: { wall: 'z', at: 3, dir: 1, along: 4.95 },
+    PC03: { wall: 'z', at: 3, dir: 1, along: 8.42 },
+    PC04: { wall: 'z', at: 0, dir: 1, along: 4.95 },
+    PC05: { wall: 'z', at: 0, dir: 1, along: 8.42 },
+    PC06: { wall: 'x', at: 0, dir: 1, along: 2.76 },
+    PC07: { wall: 'z', at: 6, dir: -1, along: 10.8 },
+    PC08: { wall: 'z', at: 6, dir: -1, along: 13.65 },
+    PC09: { wall: 'z', at: 6, dir: -1, along: 15.15 },
+    PC10: { wall: 'z', at: 0, dir: 1, along: 11.84 },
+    PC11: { wall: 'z', at: 0, dir: 1, along: 13.89 },
+  };
+  // ángulo para que el "frente local -z" mire hacia la pared
+  const faceAngle = (L) => (L.wall === 'z' ? (L.dir > 0 ? 0 : Math.PI) : L.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
+  // local (lx, lz) → mundo, rotando por θ alrededor de (cx, cz)
+  const Lw = (cx, cz, th, lx, lz) => [cx + lx * Math.cos(th) + lz * Math.sin(th), cz - lx * Math.sin(th) + lz * Math.cos(th)];
+  const solids = []; // para la auditoría de superposiciones
+  const addSolid = (name, obj) => { obj.updateWorldMatrix(true, true); solids.push({ name, box: new THREE.Box3().setFromObject(obj) }); };
+  const colliderFromBox = (b, pad = 0) => colliders.push({ minX: b.min.x - pad, maxX: b.max.x + pad, minZ: b.min.z - pad, maxZ: b.max.z + pad });
 
-  // Bajada de canaleta desde el cielorraso hasta la caja de superficie (el tendido no cruza por el piso, p.2)
-  const dropPole = (x, z, bottomY, labels, facing = 0) => {
-    const len = H - bottomY;
-    const pole = new THREE.Mesh(new THREE.BoxGeometry(0.06, len, 0.04), poleMat);
-    pole.position.set(x, bottomY + len / 2, z);
-    pole.rotation.y = facing;
-    pole.castShadow = quality.shadows;
-    root.add(pole);
-    poles.push(pole);
-    colliders.push({ minX: x - 0.06, maxX: x + 0.06, minZ: z - 0.06, maxZ: z + 0.06 });
+  // apoya un objeto sobre una superficie (base exacta, sin flotar ni intersectar)
+  const settle = (o, topY) => { o.updateWorldMatrix(true, true); const b = new THREE.Box3().setFromObject(o); o.position.y += topY - b.min.y + 0.0008; };
+  const propOn = async (name, x, z, topY, rot = 0, scale = 1) => { const o = await prop(name, x, z, { y: topY, rot, scale }); if (o) settle(o, topY); return o; };
+  // pega un objeto contra una pared usando su caja envolvente real
+  const snapToWall = (o, axis, wallAt, dir, gap = 0.01) => {
+    o.updateWorldMatrix(true, true);
+    const b = new THREE.Box3().setFromObject(o);
+    const face = wallAt + dir * WT + dir * gap;
+    if (axis === 'z') o.position.z += dir > 0 ? face - b.min.z : face - b.max.z;
+    else o.position.x += dir > 0 ? face - b.min.x : face - b.max.x;
+    o.updateWorldMatrix(true, true);
+  };
+
+  // caja de bocas en pared + canaleta vertical hasta el cielorraso
+  const wallPlate = (x, z, th, labels, y = 0.95) => {
     const plate = D.buildJackPlate(labels);
     plate.pickables.forEach((p) => { if (String(p.id).startsWith('plate:')) p.id = 'JACK:' + labels[0]; });
-    const off = v3(0, 0, 0.02).applyAxisAngle(v3(0, 1, 0), facing);
-    place(plate, x + off.x, bottomY + 0.12, z + off.z, facing);
+    place(plate, x, y, z, th);
+    const len = H - (y + 0.065);
+    const duct = new THREE.Mesh(new THREE.BoxGeometry(0.06, len, 0.04), poleMat);
+    const [dx, dz] = Lw(x, z, th, 0, 0.02);
+    duct.position.set(dx, y + 0.065 + len / 2, dz);
+    duct.rotation.y = th;
+    duct.castShadow = quality.shadows; duct.receiveShadow = true;
+    root.add(duct);
+    poles.push(duct);
     return plate;
   };
 
   for (const d of DESKS) {
-    const [x, z] = d.pos;
+    const L = DESK_LAYOUT[d.pc];
     const big = d.room === 'gerencia' || d.room === 'recepcion';
     const w = big ? 1.6 : 1.4, dep = 0.7;
-    const desk = place(D.buildDesk(w, dep, { woodMap: woodTop.map }), x, 0, z);
-    colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - dep / 2, maxZ: z + dep / 2 });
-    const top = 0.75;
-    const side = d.pc === 'PC01' ? -1 : 1; // la bajada de canaleta no puede quedar en el paso de la entrada
+    const th = faceAngle(L);
+    const off = WT + dep / 2 + 0.01;
+    const x = L.wall === 'z' ? L.along : L.at + L.dir * off;
+    const z = L.wall === 'z' ? L.at + L.dir * off : L.along;
+    const deskB = D.buildDesk(w, dep, { woodMap: woodTop.map });
+    const desk = place(deskB, x, 0, z, th);
+    const top = deskB.top || 0.75;
+    const db = new THREE.Box3().setFromObject(desk.group);
+    colliderFromBox(db);
+    solids.push({ name: `desk ${d.pc}`, box: db });
+    const side = 1;
+    const at = (lx, lz) => Lw(x, z, th, lx, lz);
     const name = d.pc, oPC = OUTLETS.find((o) => o.dev === d.pc);
-    const mon = place(D.buildMonitor(name, oPC.ip), x - 0.05, top, z - 0.17);
+    let p;
+    p = at(-0.05, -0.17); const mon = place(D.buildMonitor(name, oPC.ip), p[0], top, p[1], th);
     screens.push(mon.group);
-    place(D.buildKeyboard(), x - 0.05, top, z + 0.12);
-    place(D.buildMouse(), x + 0.28 * side, top, z + 0.14);
-    const pc = place(D.buildPCTower(name), x + side * (w / 2 - 0.2), 0, z - 0.08, -side * Math.PI / 2);
+    p = at(-0.05, 0.12); place(D.buildKeyboard(), p[0], top, p[1], th);
+    p = at(0.3, 0.14); place(D.buildMouse(), p[0], top, p[1], th);
+    p = at(side * (w / 2 - 0.2), -0.08); const pc = place(D.buildPCTower(name), p[0], 0, p[1], th - side * Math.PI / 2);
     usePicks(pc, name); usePicks(mon, name);
     register(name, desk.group, 'pc', { group: [desk.group, pc.group, mon.group] });
     desk.group.traverse((o) => { if (o.isMesh && o.userData.pickId === undefined) o.userData.pickId = name; });
     pickables.push(desk.group);
     anchors.set(`dev:${name}`, worldPort(pc, 'nic'));
-    // silla
-    if (hasSF('office_chair')) await prop('sf_office_chair', x, z + 0.62, { rot: Math.PI });
-    else place(D.buildOfficeChair(), x, 0, z + 0.62, Math.PI);
+    p = at(-0.1, 0.66);
+    if (hasSF('office_chair')) await prop('sf_office_chair', p[0], p[1], { rot: th + Math.PI });
+    else place(D.buildOfficeChair(), p[0], 0, p[1], th + Math.PI + (DESKS.indexOf(d) % 3 - 1) * 0.18);
 
-    // teléfono (si tiene)
     const labels = [oPC.label];
     let tel = null;
     if (d.tel) {
       const oT = OUTLETS.find((o) => o.dev === d.tel);
       labels.push(oT.label);
-      tel = place(D.buildPhone(oT.dev.replace('TEL', '')), x - side * (w / 2 - 0.25), top, z - 0.05, 0.25 * side);
+      p = at(-side * (w / 2 - 0.24), -0.08);
+      tel = place(D.buildPhone(oT.dev.replace('TEL', '')), p[0], top, p[1], th + 0.25);
       usePicks(tel, d.tel);
       register(d.tel, tel.group, 'phone');
       anchors.set(`dev:${d.tel}`, worldPort(tel, 'lan'));
     }
-    // canaleta + caja de superficie en la esquina trasera derecha del escritorio
-    const plate = dropPole(x + side * (w / 2 + 0.06), z - dep / 2 + 0.05, 0.8, labels, side * Math.PI / 2);
+    // caja de bocas en la pared, detrás de la esquina de la torre
+    p = at(side * (w / 2 - 0.12), -(dep / 2 + 0.01));
+    const plate = wallPlate(p[0], p[1], th, labels);
     usePicks(plate, 'JACK:' + labels[0]);
     register('JACK:' + labels[0], plate.group, 'jack', { labels });
     anchors.set(`jack:${oPC.label}`, worldPort(plate, 'J0'));
@@ -192,84 +218,139 @@ export async function furnish(scene, colliders, { manager, quality }) {
       anchors.set(`jack:${oT.label}`, worldPort(plate, 'J1'));
       anchors.set(`jackback:${oT.label}`, worldPort(plate, 'back'));
     }
-    deskBuilt.set(name, { desk, pc, mon, tel, plate });
-    // decoración liviana sobre el escritorio
-    prop(DESKS.indexOf(d) % 2 ? 'office_notepads' : 'stationery_supplies', x + 0.35 * side, z - 0.2, { y: top, rot: DESKS.indexOf(d) * 1.3 });
+    deskBuilt.set(name, { desk, pc, mon, tel, plate, pos: [x, z], th });
+    p = at(0.42, 0.05);
+    propOn(DESKS.indexOf(d) % 2 ? 'office_notepads' : 'stationery_supplies', p[0], p[1], top, th + DESKS.indexOf(d) * 0.4);
   }
+
+  // mueble bajo genérico orientado (cajonera / credenza)
+  const cabinetAt = (x, z, th, w, d, h, label) => {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.03, d), cabMat);
+    body.position.y = (h - 0.03) / 2;
+    const topM = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.03, d + 0.02), cabTop);
+    topM.position.y = h - 0.015;
+    const kick = new THREE.Mesh(new THREE.BoxGeometry(w - 0.04, 0.05, d - 0.04), new THREE.MeshStandardMaterial({ color: 0x3b3f45, roughness: 0.8 }));
+    kick.position.y = 0.025;
+    g.add(body, topM, kick);
+    const hm = new THREE.MeshStandardMaterial({ color: 0x555b63, metalness: 0.7, roughness: 0.3 });
+    for (let i = 0; i < 2; i++) {
+      const handle = new THREE.Mesh(new THREE.BoxGeometry(w * 0.35, 0.012, 0.014), hm);
+      handle.position.set(0, h * (0.36 + i * 0.34), d / 2 + 0.007);
+      g.add(handle);
+    }
+    g.position.set(x, 0, z); g.rotation.y = th;
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = quality.shadows; o.receiveShadow = true; } });
+    root.add(g);
+    const b = new THREE.Box3().setFromObject(g);
+    colliderFromBox(b); solids.push({ name: label, box: b });
+    return h;
+  };
 
   // ════════════════════ SALA DE REUNIÓN ════════════════════
   {
     const [tx, tz] = MEETING.table;
-    const t = place(D.buildMeetingTable(MEETING.size[0], MEETING.size[1], { woodMap: woodTop.map }), tx, 0, tz);
-    colliders.push({ minX: tx - MEETING.size[0] / 2, maxX: tx + MEETING.size[0] / 2, minZ: tz - MEETING.size[1] / 2, maxZ: tz + MEETING.size[1] / 2 });
+    const tb = D.buildMeetingTable(MEETING.size[0], MEETING.size[1], { woodMap: woodTop.map });
+    const t = place(tb, tx, 0, tz);
+    const tTop = tb.top || 0.75;
+    const b = new THREE.Box3().setFromObject(t.group); colliderFromBox(b); solids.push({ name: 'mesa reunión', box: b });
     for (const cx of [-0.85, 0, 0.85]) for (const s of [-1, 1]) {
-      if (hasSF('office_chair')) prop('sf_office_chair', tx + cx, tz + s * 0.95, { rot: s > 0 ? Math.PI : 0 });
-      else place(D.buildOfficeChair(), tx + cx, 0, tz + s * 0.95, s > 0 ? Math.PI : 0);
+      if (hasSF('office_chair')) prop('sf_office_chair', tx + cx, tz + s * 0.98, { rot: s > 0 ? Math.PI : 0 });
+      else place(D.buildOfficeChair(), tx + cx, 0, tz + s * 0.98, s > 0 ? Math.PI : 0);
     }
+    // TEL107 sobre una credenza contra la pared este, con su boca en la pared
     const oT = OUTLETS.find((o) => o.dev === MEETING.tel);
-    const [px, pz] = MEETING.telPos;
-    const tel = place(D.buildPhone('107'), px, 0.75, pz, -Math.PI / 2 + 0.3);
+    const cTh = -Math.PI / 2; // frente hacia -x (hacia la sala)
+    const cx = 12 - WT - 0.225 - 0.01, cz = tz;
+    const ch = cabinetAt(cx, cz, cTh, 1.2, 0.45, 0.72, 'credenza reunión');
+    const tel = place(D.buildPhone('107'), cx + 0.02, ch, cz + 0.32, cTh + 0.35);
     usePicks(tel, 'TEL107'); register('TEL107', tel.group, 'phone');
     anchors.set('dev:TEL107', worldPort(tel, 'lan'));
-    const plate = dropPole(tx + MEETING.size[0] / 2 + 0.16, tz, 0.8, [oT.label], Math.PI / 2);
+    const plate = wallPlate(12 - WT, cz + 0.42, cTh, [oT.label], 0.92);
     usePicks(plate, 'JACK:' + oT.label); register('JACK:' + oT.label, plate.group, 'jack', { labels: [oT.label] });
     anchors.set(`jack:${oT.label}`, worldPort(plate, 'J0'));
     anchors.set(`jackback:${oT.label}`, worldPort(plate, 'back'));
-    // diagrama de red impreso sobre la mesa (interactivo, ref. de Tomi)
-    const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.44), new THREE.MeshStandardMaterial({ map: diagramTexture(), roughness: 0.8 }));
-    paper.rotation.x = -Math.PI / 2; paper.rotation.z = 0.08;
-    paper.position.set(tx - 0.5, 0.762, tz + 0.05);
+    // lámina "Diagrama de red" apoyada sobre la mesa (sin z-fighting)
+    const paperMat = new THREE.MeshStandardMaterial({ map: diagramTexture(), roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    const paper = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.0012, 0.44), [null, null, paperMat, null, null, null].map((m) => m || new THREE.MeshStandardMaterial({ color: 0xf4f4f0 })));
+    paper.rotation.y = 0.08;
+    paper.position.set(tx - 0.5, tTop + 0.0006, tz + 0.05);
     paper.userData.pickId = 'DIAGRAMA';
     root.add(paper); pickables.push(paper);
     register('DIAGRAMA', paper, 'doc');
-    prop('projector_screen', tx, 8.12, { rot: 0 }).then((o) => { if (o) { o.userData.pickId = 'PRESENTACION'; o.traverse((m) => (m.userData.pickId = 'PRESENTACION')); pickables.push(o); register('PRESENTACION', o, 'doc'); } });
-    prop('potted_plant_02', 11.55, 11.55, { collide: true });
-    prop('ceramic_vase_01', tx + 0.6, tz - 0.1, { y: 0.762, scale: 0.8 });
+    prop('projector_screen', tx, 8.3).then((o) => { if (!o) return; snapToWall(o, 'z', 8, 1, 0.02); o.traverse((m) => (m.userData.pickId = 'PRESENTACION')); pickables.push(o); register('PRESENTACION', o, 'doc'); addSolid('pantalla', o); });
+    propOn('ceramic_vase_01', tx + 0.7, tz - 0.15, tTop, 0, 0.8);
   }
 
   // ════════════════════ EQUIPOS SUELTOS ════════════════════
-  const singleDevice = async (dev, built, x, y, z, rot, poleAt, poleRot = 0) => {
-    place(built, x, y, z, rot);
+  const looseDevice = (dev, built, x, y, z, th, plateAt, plateTh, plateY = 0.95) => {
+    place(built, x, y, z, th);
     usePicks(built, dev);
     register(dev, built.group, DEVICES[dev]?.kind || 'device');
     anchors.set(`dev:${dev}`, worldPort(built, 'lan'));
     const o = OUTLETS.find((q) => q.dev === dev);
-    if (poleAt) {
-      const plate = dropPole(poleAt[0], poleAt[1], 0.8, [o.label], poleRot);
-      usePicks(plate, 'JACK:' + o.label); register('JACK:' + o.label, plate.group, 'jack', { labels: [o.label] });
-      anchors.set(`jack:${o.label}`, worldPort(plate, 'J0'));
-      anchors.set(`jackback:${o.label}`, worldPort(plate, 'back'));
-    }
+    const plate = wallPlate(plateAt[0], plateAt[1], plateTh, [o.label], plateY);
+    usePicks(plate, 'JACK:' + o.label); register('JACK:' + o.label, plate.group, 'jack', { labels: [o.label] });
+    anchors.set(`jack:${o.label}`, worldPort(plate, 'J0'));
+    anchors.set(`jackback:${o.label}`, worldPort(plate, 'back'));
   };
-  // Impresoras sobre cajonera
-  for (const id of ['IMP01', 'IMP02']) {
-    const [x, z] = DEVICES[id].pos;
-    const topY = lowCabinet(x, z, 0.62, 0.55, 0.66);
-    await singleDevice(id, D.buildPrinter(id), x, topY, z, id === 'IMP01' ? Math.PI / 2 : 0, [x + 0.42, z - 0.25], Math.PI / 2);
+  // Impresoras sobre cajonera contra la pared oeste de su sala (frente hacia +x)
+  for (const [id, wallX] of [['IMP01', 0], ['IMP02', 10]]) {
+    const z = DEVICES[id].pos[1];
+    const th = Math.PI / 2;
+    const cx = wallX + WT + 0.275 + 0.01;
+    const h = cabinetAt(cx, z, th, 0.62, 0.55, 0.66, 'cajonera ' + id);
+    looseDevice(id, D.buildPrinter(id), cx, h, z, th, [wallX + WT, z - 0.42], th, 0.92);
   }
-  // NAS2 en gerencia sobre mesa auxiliar + UPS
+  // NAS2 en gerencia: mueble bajo contra la pared oeste + UPS al lado
   {
-    const [x, z] = DEVICES.NAS2.pos;
-    const st = await prop('side_table_01', x, z, { collide: true });
-    let topY = 0.55;
-    if (st) topY = new THREE.Box3().setFromObject(st).max.y;
-    await singleDevice('NAS2', D.buildNAS('NAS2'), x, topY, z, Math.PI / 2, [x + 0.4, z - 0.3], Math.PI / 2);
+    const z = DEVICES.NAS2.pos[1];
+    const th = Math.PI / 2;
+    const cx = WT + 0.225 + 0.01;
+    const h = cabinetAt(cx, z, th, 0.6, 0.45, 0.6, 'mueble NAS2');
+    looseDevice('NAS2', D.buildNAS('NAS2'), cx, h, z + 0.1, th, [WT, z - 0.2], th, 0.88);
   }
-  // APs en el cielorraso (cuelgan hacia abajo desde el punto de montaje)
+  // APs en el cielorraso
   for (const id of ['AP1', 'AP2']) {
     const [x, z] = DEVICES[id].pos;
     const ap = place(D.buildAP(id), x, H, z);
     usePicks(ap, id); register(id, ap.group, 'ap');
     anchors.set(`dev:${id}`, worldPort(ap, 'lan') || { pos: v3(x, H + 0.02, z), dir: v3(0, 1, 0) });
   }
-  // UPS
+  // UPS (la de NAS2 al lado del mueble, contra la pared)
+  const upsPos = { 'UPS-R1': [14.75, 10.55, Math.PI], 'UPS-R2': [15.6, 2.0, -Math.PI / 2], 'UPS-NAS2': [WT + 0.2, DEVICES.NAS2.pos[1] + 0.55, Math.PI / 2] };
   for (const u of UPS) {
     const b = D.buildUPS(u.model.includes('APC') ? 'apc' : 'atomlux', u.id);
-    const rot = u.protects === 'R1' ? Math.PI : u.protects === 'R2' ? -Math.PI / 2 : Math.PI / 2;
-    place(b, u.pos[0], 0, u.pos[1], rot);
+    const [x, z, rot] = upsPos[u.id];
+    place(b, x, 0, z, rot);
     usePicks(b, u.id); register(u.id, b.group, 'ups');
-    addColliderFromObject(b.group, 0.02);
+    const bb = new THREE.Box3().setFromObject(b.group); colliderFromBox(bb, 0.02); solids.push({ name: u.id, box: bb });
   }
+  for (const id of ['R1', 'R2']) solids.push({ name: 'rack ' + id, box: new THREE.Box3().setFromObject(racks[id].group) });
+
+  // Matafuegos ABC (modelo propio, rotulado en castellano) con cartel
+  const extinguisher = (x, z, th) => {
+    const g = new THREE.Group();
+    const red = new THREE.MeshStandardMaterial({ color: 0xc8161d, roughness: 0.35, metalness: 0.2 });
+    const blk = new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.6 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.42, 24), red); body.position.y = 0.45; g.add(body);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.075, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), red); dome.position.y = 0.66; g.add(dome);
+    const valve = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.07, 12), new THREE.MeshStandardMaterial({ color: 0xb8bcc2, metalness: 0.9, roughness: 0.3 })); valve.position.y = 0.75; g.add(valve);
+    const lever = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.012, 0.025), blk); lever.position.set(0.03, 0.79, 0); lever.rotation.z = -0.25; g.add(lever);
+    const hose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([v3(0.02, 0.76, 0), v3(0.1, 0.7, 0.02), v3(0.1, 0.4, 0.03), v3(0.085, 0.3, 0.02)]), 16, 0.008, 6), blk); g.add(hose);
+    const lab = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.16), new THREE.MeshStandardMaterial({ map: textCanvas(['MATAFUEGO', 'ABC 5 kg'], { w: 160, h: 256, bg: '#ffffff', fg: '#1b1b1b', size: 26, font: 800 }), roughness: 0.6 }));
+    lab.position.set(0, 0.45, 0.0755); g.add(lab);
+    const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.1, 0.03), blk); bracket.position.set(0, 0.62, -0.09); g.add(bracket);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.28), new THREE.MeshStandardMaterial({ map: textCanvas(['MATA', 'FUEGO'], { w: 200, h: 280, bg: '#d0021b', fg: '#ffffff', size: 46, font: 800 }), roughness: 0.5 }));
+    sign.position.set(0, 1.22, -0.104); g.add(sign);
+    g.position.set(x, 0.12, z); g.rotation.y = th;
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = quality.shadows; o.receiveShadow = true; } });
+    root.add(g);
+    return g;
+  };
+  // recepción, junto a la entrada (pared sur) y sala técnica (pared norte, junto a la puerta)
+  extinguisher(3.2, 12 - WT - 0.105, Math.PI);
+  extinguisher(14.3, 8 + WT + 0.105, 0);
 
   // ════════════════════ CABLEADO ════════════════════
   const color = (o) => (o.trunk ? TRUNK_COLOR : VLANS[o.vlan]?.color || '#ffffff');
@@ -401,37 +482,102 @@ export async function furnish(scene, colliders, { manager, quality }) {
   }
 
   // ════════════════════ DECORACIÓN (CC0) ════════════════════
-  const deco = [
-    ['sofa_03', 4.9, 11.45, { rot: Math.PI, collide: true }],
-    ['coffee_table_round_01', 4.9, 10.65, { collide: true }],
-    ['potted_plant_02', 0.45, 11.5, { collide: true }],
-    ['potted_plant_02', 5.6, 8.45, { collide: true }],
-    ['korean_fire_extinguisher_01', 3.2, 11.85, { rot: Math.PI }],
-    ['wall_clock', 3.2, 8.07, { y: 2.05, rot: 0 }],
-    ['modern_arm_chair_01', 1.0, 1.55, { rot: Math.PI * 0.15, collide: true }],
-    ['modern_arm_chair_01', 2.1, 1.55, { rot: -Math.PI * 0.15, collide: true }],
-    ['potted_plant_04', 3.6, 0.45, { collide: true }],
-    ['steel_frame_shelves_03', 3.55, 4.4, { rot: -Math.PI / 2, collide: true }],
-    ['hanging_picture_frame_02', 0.07, 2.8, { y: 1.55, rot: Math.PI / 2 }],
-    ['potted_plant_04', 6.2, 0.35, { collide: true }],
-    ['potted_plant_04', 9.7, 0.35, { collide: true }],
-    ['potted_plant_04', 6.2, 5.65, { collide: true }],
-    ['potted_plant_04', 9.7, 5.65, { collide: true }],
-    ['potted_plant_02', 10.4, 0.45, { collide: true }],
-    ['steel_frame_shelves_03', 15.6, 5.2, { rot: -Math.PI / 2, collide: true }],
-    ['potted_plant_04', 15.6, 0.4, { collide: true }],
-    ['potted_plant_02', 0.45, 6.4, { collide: true }],
-    ['potted_plant_02', 15.55, 6.4, { collide: true }],
-    ['fire_alarm', 7.0, 7.93, { y: 1.35, rot: Math.PI }],
-    ['wall_clock', 9.0, 6.07, { y: 2.05 }],
-    ['steel_frame_shelves_03', 12.4, 11.55, { rot: 0, collide: true }],
-    ['korean_fire_extinguisher_01', 12.3, 8.4, {}],
-    ['hanging_picture_frame_01', 6.07, 10.0, { y: 1.55, rot: Math.PI / 2 }],
-    ['binder_notebook', 1.2, 2.66, { y: 0.762, rot: 0.4 }],
-  ];
-  await Promise.all(deco.map(([n, x, z, o]) => prop(n, x, z, o)));
+  // Cada pieza se apoya contra su pared/esquina usando su caja envolvente real (nada atraviesa paredes).
+  const deco = async (name, x, z, { rot = 0, y = 0, snap = [], collide = true, scale = 1 } = {}) => {
+    const o = await prop(name, x, z, { rot, y, scale });
+    if (!o) return null;
+    for (const [axis, at, dir, gap] of snap) snapToWall(o, axis, at, dir, gap ?? 0.015);
+    o.updateWorldMatrix(true, true);
+    const b = new THREE.Box3().setFromObject(o);
+    if (collide) colliderFromBox(b, 0.02);
+    if (collide) solids.push({ name, box: b });
+    return o;
+  };
+  const jobs = [];
+  // sofá moderno de 2–3 cuerpos (tela gris, patas metálicas)
+  function modernSofa(x, z, th, w) {
+    const g = new THREE.Group();
+    const fab = new THREE.MeshStandardMaterial({ color: 0x8d9298, roughness: 0.97 });
+    const fab2 = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.97 });
+    const leg = new THREE.MeshStandardMaterial({ color: 0x2b2d30, metalness: 0.6, roughness: 0.4 });
+    const rb = (W, Hh, Dd, r, m, px, py, pz) => { const o = new THREE.Mesh(new RoundedBoxGeometry(W, Hh, Dd, 3, r), m); o.position.set(px, py, pz); g.add(o); return o; };
+    const D = 0.86;
+    rb(w, 0.2, D, 0.03, fab, 0, 0.25, 0);
+    rb(0.16, 0.42, D, 0.05, fab, -w / 2 + 0.08, 0.36, 0); rb(0.16, 0.42, D, 0.05, fab, w / 2 - 0.08, 0.36, 0);
+    rb(w - 0.04, 0.46, 0.18, 0.06, fab, 0, 0.55, -D / 2 + 0.09);
+    const n = w > 1.8 ? 3 : 2, cw = (w - 0.32) / n;
+    for (let i = 0; i < n; i++) {
+      rb(cw - 0.015, 0.13, D - 0.22, 0.05, fab2, -w / 2 + 0.16 + cw * (i + 0.5), 0.41, 0.06);
+      rb(cw - 0.03, 0.4, 0.16, 0.07, fab2, -w / 2 + 0.16 + cw * (i + 0.5), 0.67, -D / 2 + 0.24).rotation.x = -0.12;
+    }
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.012, 0.15, 10), leg); l.position.set(sx * (w / 2 - 0.08), 0.075, sz * (D / 2 - 0.08)); g.add(l); }
+    g.position.set(x, 0, z); g.rotation.y = th;
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = quality.shadows; o.receiveShadow = true; } });
+    root.add(g);
+    return g;
+  }
+  // Recepción: zona de espera contra la pared sur, mesa ratona delante con paso libre
+  jobs.push((async () => {
+    // sofá de 3 cuerpos escalado a la pared libre de recepción (x 3,2–5,9), mesa ratona con 40 cm de paso
+    const sofa = modernSofa(4.75, 11.45, Math.PI, 2.1);
+    snapToWall(sofa, 'z', 12, -1, 0.02); snapToWall(sofa, 'x', 6, -1, 0.05);
+    { const b = new THREE.Box3().setFromObject(sofa); colliderFromBox(b, 0.02); solids.push({ name: 'sofá', box: b }); }
+    const sb = sofa ? new THREE.Box3().setFromObject(sofa) : new THREE.Box3(new THREE.Vector3(3.5, 0, 11.1), new THREE.Vector3(5.9, 0.9, 11.9));
+    const t = await deco('coffee_table_round_01', (sb.min.x + sb.max.x) / 2, sb.min.z - 0.8, { scale: 0.72, collide: false });
+    if (t) {
+      let tb = new THREE.Box3().setFromObject(t);
+      t.position.z += sb.min.z - 0.4 - tb.max.z;
+      t.updateWorldMatrix(true, true);
+      tb = new THREE.Box3().setFromObject(t);
+      colliderFromBox(tb, 0.02); solids.push({ name: 'mesa ratona', box: tb });
+    }
+  })());
+  jobs.push(deco('potted_plant_02', 0.4, 11.6, { snap: [['x', 0, 1], ['z', 12, -1]] }));
+  jobs.push(deco('potted_plant_02', 5.6, 8.4, { snap: [['x', 6, -1], ['z', 8, 1]] }));
+  jobs.push(deco('wall_clock', 1.6, 8.2, { y: 2.0, snap: [['z', 8, 1, 0.002]], collide: false }));
+  // Gerencia
+  jobs.push(deco('modern_arm_chair_01', 3.2, 1.0, { rot: -Math.PI / 2 - 0.25 }));
+  jobs.push(deco('modern_arm_chair_01', 3.2, 2.15, { rot: -Math.PI / 2 + 0.25 }));
+  jobs.push(deco('potted_plant_04', 3.6, 0.4, { snap: [['x', 4, -1], ['z', 0, 1]] }));
+  cabinetAt(4 - WT - 0.225 - 0.01, 4.4, -Math.PI / 2, 1.2, 0.45, 0.72, 'credenza gerencia');
+  jobs.push(deco('hanging_picture_frame_02', 0.2, 2.76, { y: 1.45, rot: Math.PI / 2, snap: [['x', 0, 1, 0.002]], collide: false }));
+  // Boxes: una planta en la esquina libre de cada uno
+  jobs.push(deco('potted_plant_04', 6.15, 0.4, { snap: [['x', 6.5, -1], ['z', 0, 1]] }));
+  jobs.push(deco('potted_plant_04', 6.15, 3.4, { snap: [['x', 6.5, -1], ['z', 3, 1]] }));
+  jobs.push(deco('potted_plant_04', 9.65, 0.4, { snap: [['x', 10, -1], ['z', 0, 1]] }));
+  jobs.push(deco('potted_plant_04', 9.65, 3.4, { snap: [['x', 10, -1], ['z', 3, 1]] }));
+  // Área de escritorios
+  jobs.push(deco('potted_plant_02', 10.4, 0.45, { snap: [['x', 10, 1], ['z', 0, 1]] }));
+  jobs.push(deco('potted_plant_04', 15.6, 0.4, { snap: [['x', 16, -1], ['z', 0, 1]] }));
+  // Circulación
+  jobs.push(deco('potted_plant_02', 0.4, 6.45, { snap: [['x', 0, 1], ['z', 6, 1]] }));
+  jobs.push(deco('potted_plant_02', 15.6, 6.45, { snap: [['x', 16, -1], ['z', 6, 1]] }));
+  jobs.push(deco('fire_alarm', 7.0, 7.9, { y: 1.35, rot: Math.PI, snap: [['z', 8, -1, 0.002]], collide: false }));
+  jobs.push(deco('wall_clock', 9.6, 6.1, { y: 2.0, snap: [['z', 6, 1, 0.002]], collide: false }));
+  // Sala técnica y reunión
+  jobs.push(deco('steel_frame_shelves_03', 12.5, 11.5, { snap: [['x', 12, 1], ['z', 12, -1]] }));
+  jobs.push(deco('hanging_picture_frame_01', 6.2, 10.1, { y: 1.5, rot: Math.PI / 2, snap: [['x', 6, 1, 0.002]], collide: false }));
+  jobs.push(deco('potted_plant_02', 11.55, 11.55, { snap: [['x', 12, -1], ['z', 12, -1]] }));
+  // carpeta sobre el escritorio de gerencia
+  { const g = deskBuilt.get('PC06'); const [x, z] = Lw(g.pos[0], g.pos[1], g.th, -0.5, 0.1); jobs.push(propOn('binder_notebook', x, z, 0.75, g.th + 0.4)); }
+  await Promise.all(jobs);
 
-  return { root, interact, pickables, anchors, segments, xray, poles, poleMat, leds, cableMeshes, racks, screens, deskBuilt };
+  // Auditoría de superposiciones (cajas envolventes): objetos sólidos entre sí y contra paredes
+  const audit = (wallBoxes) => {
+    const out = [];
+    const shrink = (b) => b.clone().expandByScalar(-0.012);
+    for (let i = 0; i < solids.length; i++) {
+      const a = shrink(solids[i].box);
+      for (let j = i + 1; j < solids.length; j++) if (a.intersectsBox(shrink(solids[j].box))) out.push(`${solids[i].name} ↔ ${solids[j].name}`);
+      for (const w of wallBoxes) {
+        if (a.max.x > w.minX + 0.012 && a.min.x < w.maxX - 0.012 && a.max.z > w.minZ + 0.012 && a.min.z < w.maxZ - 0.012) { out.push(`${solids[i].name} ↔ pared`); break; }
+      }
+    }
+    return out;
+  };
+
+  return { root, interact, pickables, anchors, segments, xray, poles, poleMat, leds, cableMeshes, racks, screens, deskBuilt, audit, solids, woodTop };
+
 }
 
 // glTF JSON con el binario en base64 → GLB en memoria (sin fetch de data: URIs)

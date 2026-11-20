@@ -61,11 +61,11 @@ export function ceilingTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
   const g = c.getContext('2d');
-  g.fillStyle = '#f4f4f1'; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = '#f7f7f6'; g.fillRect(0, 0, 256, 256);
   // micro-perforación
   g.fillStyle = 'rgba(0,0,0,0.035)';
   for (let i = 0; i < 1400; i++) g.fillRect(Math.random() * 256, Math.random() * 256, 1.2, 1.2);
-  g.fillStyle = '#d9dad6';
+  g.fillStyle = '#dcdddd';
   g.fillRect(0, 0, 256, 5); g.fillRect(0, 0, 5, 256);
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;

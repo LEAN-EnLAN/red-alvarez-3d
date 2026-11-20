@@ -1,4 +1,9 @@
 // Construye la arquitectura EXACTA del plano de la p.2 (salas, paredes, puertas, ventanas).
+// - Sin caras coplanares (evita el parpadeo/z-fighting en marcos y dinteles).
+// - Sombreado de esquinas horneado en vértices + franjas de AO en piso y cielorraso
+//   (se ve bien incluso en celulares sin postproceso).
+// - Puertas con hoja real que se abren al acercarse.
+// - Corte de paredes a 1,3 m para la vista maqueta, con "tapa" oscura en el corte.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { META, ROOMS, WALLS, DOORS, WINDOWS } from '../data/tp.js';
@@ -7,29 +12,39 @@ import { pbrSet, textCanvas, ceilingTexture, cityTexture } from './textures.js';
 const H = META.size.h; // altura de cielorraso
 const T = 0.12; // espesor de pared
 const DOOR_H = 2.1;
+const JAMB = 0.045; // ancho de marco
+export const CUT_Y = 1.3;
 
 export function buildBuilding(scene, colliders) {
   const root = new THREE.Group();
   root.name = 'building';
   scene.add(root);
+  const cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), CUT_Y);
+  const cutMaterials = new Set();
 
   // ── materiales ──
   const tile = pbrSet('marble_01', { repeat: 1 });
   const wood = pbrSet('laminate_floor_02', { repeat: 1 });
   const plaster = pbrSet('plastered_wall_04', { repeat: 1, color: false });
   const M = {
-    tile: new THREE.MeshStandardMaterial({ ...tile, roughness: 1, color: 0xf2ece2 }),
-    wood: new THREE.MeshStandardMaterial({ ...wood, roughness: 1, color: 0xe8ddd0 }),
-    wall: new THREE.MeshStandardMaterial({ color: 0xf1efea, roughness: 0.92, normalMap: plaster.normalMap, normalScale: new THREE.Vector2(0.25, 0.25) }),
-    accent: new THREE.MeshStandardMaterial({ color: 0x2b3a4f, roughness: 0.7 }),
-    base: new THREE.MeshStandardMaterial({ color: 0x4a4f57, roughness: 0.6 }),
-    frame: new THREE.MeshStandardMaterial({ color: 0x3a3f46, metalness: 0.6, roughness: 0.35 }),
-    glass: new THREE.MeshPhysicalMaterial({ color: 0xdbe7ee, metalness: 0, roughness: 0.05, transmission: 0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }),
-    frost: new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, roughness: 0.9, depthWrite: false, side: THREE.DoubleSide }),
+    tile: new THREE.MeshStandardMaterial({ ...tile, roughness: 0.8, color: 0xf7f4ef }),
+    wood: new THREE.MeshStandardMaterial({ ...wood, roughness: 0.9, color: 0xf0e6da }),
+    wall: new THREE.MeshStandardMaterial({ color: 0xf6f6f4, roughness: 0.94, vertexColors: true, normalMap: plaster.normalMap, normalScale: new THREE.Vector2(0.18, 0.18), side: THREE.DoubleSide }),
+    base: new THREE.MeshStandardMaterial({ color: 0xe6e3dc, roughness: 0.55 }),
+    frame: new THREE.MeshStandardMaterial({ color: 0x2f3338, metalness: 0.55, roughness: 0.38 }),
+    glass: new THREE.MeshPhysicalMaterial({ color: 0xe4eef2, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.14, depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 1.4 }),
+    frost: new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, roughness: 0.9, depthWrite: false, side: THREE.DoubleSide }),
     ceiling: new THREE.MeshStandardMaterial({ map: ceilingTexture(), roughness: 0.95 }),
-    panel: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfffaf0, emissiveIntensity: 1.6, roughness: 0.4 }),
+    panel: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff8ee, emissiveIntensity: 2.2, roughness: 0.4 }),
+    doorWood: new THREE.MeshStandardMaterial({ color: 0xc9a77f, roughness: 0.55 }),
+    handle: new THREE.MeshStandardMaterial({ color: 0xbfc3c8, metalness: 0.9, roughness: 0.25 }),
   };
   M.ceiling.map.repeat.set(16 / 0.6, 12 / 0.6);
+  // Tapa oscura donde se corta la pared (vista maqueta): las caras internas se pintan de gris grafito
+  M.wall.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>\n if (!gl_FrontFacing) gl_FragColor = vec4(0.17, 0.18, 0.2, 1.0);');
+  };
+  for (const k of ['wall', 'base', 'frame', 'glass', 'frost', 'doorWood', 'handle']) cutMaterials.add(M[k]);
 
   // ── pisos por sala (UV en metros) ──
   const floors = { tile: [], wood: [] };
@@ -39,7 +54,7 @@ export function buildBuilding(scene, colliders) {
     g.rotateX(-Math.PI / 2);
     g.translate(r.x0 + w / 2, 0, r.z0 + d / 2);
     const uv = g.attributes.uv, pos = g.attributes.position;
-    const scale = r.floor === 'tile' ? 1.2 : 2.0; // metros por repetición
+    const scale = r.floor === 'tile' ? 1.2 : 2.0;
     for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / scale, pos.getZ(i) / scale);
     floors[r.floor].push(g);
   }
@@ -50,12 +65,28 @@ export function buildBuilding(scene, colliders) {
     root.add(m);
   }
 
-  // ── paredes con huecos de puertas/ventanas ──
-  const solid = [], acc = [], base = [], frames = [], glass = [], frost = [];
-  const box = (arr, x0, x1, y0, y1, z0, z1) => {
-    const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0);
+  // ── paredes ──
+  const solid = [], base = [], frames = [], glass = [], frost = [], aoFloor = [], aoCeil = [];
+  const aoColor = (y) => {
+    // oscurece cerca del piso y del cielorraso (oclusión ambiental aproximada)
+    const k = 1 - 0.2 * Math.exp(-y / 0.22) - 0.1 * Math.exp(-(H - y) / 0.18);
+    return k;
+  };
+  const box = (arr, x0, x1, y0, y1, z0, z1, ao = false) => {
+    const hs = ao ? Math.max(1, Math.ceil((y1 - y0) / 0.15)) : 1;
+    const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0, 1, hs, 1);
     g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
-    // UV en metros para que el normal map no se estire
+    if (ao) {
+      const p = g.attributes.position, c = new Float32Array(p.count * 3);
+      for (let i = 0; i < p.count; i++) { const k = aoColor(p.getY(i)); c[i * 3] = c[i * 3 + 1] = c[i * 3 + 2] = k; }
+      g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+      // UV en metros para el normal map
+      const uv = g.attributes.uv, n = g.attributes.normal;
+      for (let i = 0; i < p.count; i++) {
+        const along = Math.abs(n.getX(i)) > 0.5 ? p.getZ(i) : p.getX(i);
+        uv.setXY(i, along / 1.5, p.getY(i) / 1.5);
+      }
+    }
     arr.push(g);
     return g;
   };
@@ -68,29 +99,48 @@ export function buildBuilding(scene, colliders) {
     const wins = WINDOWS.filter((d) => (d.wall === 'z') === horiz && Math.abs(d.at - at) < 1e-6);
     return { horiz, at, lo, hi, doors, wins };
   };
-  // pieza de pared a lo largo del eje (s0..s1) entre alturas y0..y1
-  const piece = (arr, info, s0, s1, y0, y1, thick = T) => {
-    if (s1 - s0 < 1e-3) return;
-    if (info.horiz) box(arr, s0, s1, y0, y1, info.at - thick / 2, info.at + thick / 2);
-    else box(arr, info.at - thick / 2, info.at + thick / 2, y0, y1, s0, s1);
+  const piece = (arr, info, s0, s1, y0, y1, thick = T, ao = false) => {
+    if (s1 - s0 < 1e-3 || y1 - y0 < 1e-3) return;
+    if (info.horiz) box(arr, s0, s1, y0, y1, info.at - thick / 2, info.at + thick / 2, ao);
+    else box(arr, info.at - thick / 2, info.at + thick / 2, y0, y1, s0, s1, ao);
   };
   const collide = (info, s0, s1, thick = T) => {
     if (s1 - s0 < 1e-3) return;
     if (info.horiz) colliders.push({ minX: s0, maxX: s1, minZ: info.at - thick / 2, maxZ: info.at + thick / 2 });
     else colliders.push({ minX: info.at - thick / 2, maxX: info.at + thick / 2, minZ: s0, maxZ: s1 });
   };
+  // franja de sombra de contacto a ambos lados de un tramo de pared
+  const aoStrip = (info, s0, s1, ceiling = false) => {
+    const L = s1 - s0, Wd = ceiling ? 0.3 : 0.42;
+    if (L < 0.05) return;
+    for (const side of [-1, 1]) {
+      const g = new THREE.PlaneGeometry(L, Wd);
+      g.rotateX(ceiling ? Math.PI / 2 : -Math.PI / 2);
+      // v=1 junto a la pared
+      const uv = g.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setY(i, side < 0 ? 1 - uv.getY(i) : uv.getY(i));
+      if (ceiling) for (let i = 0; i < uv.count; i++) uv.setY(i, 1 - uv.getY(i));
+      const off = side * (T / 2 + Wd / 2);
+      const y = ceiling ? H - 0.003 : 0.003;
+      if (info.horiz) g.translate((s0 + s1) / 2, y, info.at + off);
+      else { g.rotateY(Math.PI / 2); g.translate(info.at + off, y, (s0 + s1) / 2); }
+      (ceiling ? aoCeil : aoFloor).push(g);
+    }
+  };
 
+  const doorSpecs = [];
   for (const w of WALLS) {
     const info = gapsFor(w);
     const cuts = [...info.doors.map((d) => ({ ...d, kind: 'door' })), ...info.wins.map((d) => ({ ...d, kind: 'win' }))].sort((a, b) => a.from - b.from);
     let s = info.lo;
     const segs = [];
-    for (const c of cuts) { segs.push([s, c.from]); s = c.to; }
+    // los tramos sólidos terminan donde empieza el marco (sin solapes)
+    for (const c of cuts) { const j = c.kind === 'door' ? JAMB : 0; segs.push([s, c.from - j]); s = c.to + j; }
     segs.push([s, info.hi]);
 
     if (w.glass) {
-      // Tabique vidriado con perfilería de aluminio y banda esmerilada
       for (const [a, b] of segs) {
+        if (b - a < 1e-3) continue;
         piece(frames, info, a, b, 0, 0.06, 0.07);
         piece(frames, info, a, b, H - 0.05, H, 0.07);
         piece(glass, info, a, b, 0.06, H - 0.05, 0.012);
@@ -98,40 +148,47 @@ export function buildBuilding(scene, colliders) {
         const n = Math.max(1, Math.round((b - a) / 1.2));
         for (let i = 0; i <= n; i++) {
           const p = a + ((b - a) * i) / n;
-          piece(frames, info, Math.max(a, p - 0.025), Math.min(b, p + 0.025), 0, H, 0.07);
+          piece(frames, info, Math.max(a, p - 0.025), Math.min(b, p + 0.025), 0.06, H - 0.05, 0.068);
         }
         collide(info, a, b, 0.08);
       }
     } else {
       for (const [a, b] of segs) {
-        piece(solid, info, a, b, 0, H);
-        piece(base, info, a, b, 0, 0.08, T + 0.02);
+        piece(solid, info, a, b, 0, H, T, true);
+        piece(base, info, a, b, 0, 0.07, T + 0.016);
         collide(info, a, b);
+        aoStrip(info, a, b);
+        aoStrip(info, a, b, true);
       }
     }
     for (const c of cuts) {
       if (c.kind === 'door') {
-        // dintel sobre la puerta + marco
         if (w.glass) {
-          piece(frames, info, c.from, c.to, DOOR_H, DOOR_H + 0.05, 0.07);
-          piece(glass, info, c.from, c.to, DOOR_H + 0.05, H - 0.05, 0.012);
-          piece(frames, info, c.from, c.to, H - 0.05, H, 0.07);
-        } else piece(solid, info, c.from, c.to, DOOR_H, H);
-        piece(frames, info, c.from - 0.04, c.from, 0, DOOR_H + 0.04, T + 0.03);
-        piece(frames, info, c.to, c.to + 0.04, 0, DOOR_H + 0.04, T + 0.03);
-        piece(frames, info, c.from - 0.04, c.to + 0.04, DOOR_H, DOOR_H + 0.04, T + 0.03);
+          piece(frames, info, c.from - JAMB, c.to + JAMB, DOOR_H, DOOR_H + JAMB, 0.07);
+          piece(glass, info, c.from - JAMB, c.to + JAMB, DOOR_H + JAMB, H - 0.05, 0.012);
+          piece(frames, info, c.from - JAMB, c.to + JAMB, H - 0.05, H, 0.07);
+        } else {
+          piece(solid, info, c.from - JAMB, c.to + JAMB, DOOR_H + JAMB, H, T, true);
+          aoStrip(info, c.from - JAMB, c.to + JAMB, true);
+        }
+        // marco: dos parantes + cabezal (más anchos que la pared, sin caras compartidas)
+        piece(frames, info, c.from - JAMB, c.from, 0, DOOR_H + JAMB, T + 0.024);
+        piece(frames, info, c.to, c.to + JAMB, 0, DOOR_H + JAMB, T + 0.024);
+        piece(frames, info, c.from, c.to, DOOR_H, DOOR_H + JAMB, T + 0.024);
+        if (!c.open) doorSpecs.push({ ...c, glassWall: !!w.glass, horiz: info.horiz });
       } else {
-        // ventana: antepecho + dintel + vidrio
-        piece(solid, info, c.from, c.to, 0, 0.9);
-        piece(solid, info, c.from, c.to, 2.25, H);
-        piece(frames, info, c.from, c.to, 0.9, 0.94, T + 0.04);
-        piece(frames, info, c.from, c.to, 2.21, 2.25, T + 0.02);
+        piece(solid, info, c.from, c.to, 0, 0.9, T, true);
+        piece(solid, info, c.from, c.to, 2.25, H, T, true);
+        piece(base, info, c.from, c.to, 0, 0.07, T + 0.016);
+        aoStrip(info, c.from, c.to);
+        piece(frames, info, c.from, c.to, 0.9, 0.93, T + 0.05);
+        piece(frames, info, c.from, c.to, 2.22, 2.25, T + 0.01);
         const n = Math.max(1, Math.round((c.to - c.from) / 1.1));
         for (let i = 0; i <= n; i++) {
           const p = c.from + ((c.to - c.from) * i) / n;
-          piece(frames, info, Math.max(c.from, p - 0.025), Math.min(c.to, p + 0.025), 0.9, 2.25, T);
+          piece(frames, info, Math.max(c.from, p - 0.025), Math.min(c.to, p + 0.025), 0.93, 2.22, T - 0.01);
         }
-        piece(glass, info, c.from, c.to, 0.94, 2.21, 0.01);
+        piece(glass, info, c.from, c.to, 0.93, 2.22, 0.01);
         collide(info, c.from, c.to);
       }
     }
@@ -152,68 +209,151 @@ export function buildBuilding(scene, colliders) {
   add(frost, M.frost, 'frost', false);
   if (glassMesh) glassMesh.renderOrder = 2;
 
+  // franjas de AO
+  const aoTex = (() => {
+    const c = document.createElement('canvas'); c.width = 4; c.height = 64;
+    const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 64);
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.55, 'rgba(0,0,0,0.12)'); gr.addColorStop(1, 'rgba(0,0,0,0.55)');
+    g.fillStyle = gr; g.fillRect(0, 0, 4, 64);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+  const aoMat = (op) => new THREE.MeshBasicMaterial({ map: aoTex, transparent: true, opacity: op, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, toneMapped: false });
+  const aoF = new THREE.Mesh(mergeGeometries(aoFloor), aoMat(0.55)); aoF.renderOrder = 1; aoF.name = 'ao-floor'; root.add(aoF);
+  const aoC = new THREE.Mesh(mergeGeometries(aoCeil), aoMat(0.3)); aoC.renderOrder = 1; aoC.name = 'ao-ceiling'; root.add(aoC);
+
+  // ── puertas con hoja ──
+  const doors = [];
+  const glassLeafMat = M.glass.clone(); glassLeafMat.opacity = 0.22; cutMaterials.add(glassLeafMat);
+  for (const d of doorSpecs) {
+    const room = ROOMS.find((r) => r.id === d.room);
+    const cx = (room.x0 + room.x1) / 2, cz = (room.z0 + room.z1) / 2;
+    const roomSide = d.horiz ? Math.sign(cz - d.at) : Math.sign(cx - d.at);
+    // bisagra lejos de los escritorios de los boxes 2 y 4 (puertas sobre x = 7,5)
+    const hingeAtTo = !d.horiz && d.at === 7.5;
+    const w = d.to - d.from - 0.01;
+    const pivot = new THREE.Group();
+    const hingeS = hingeAtTo ? d.to - 0.005 : d.from + 0.005;
+    if (d.horiz) pivot.position.set(hingeS, 0, d.at); else pivot.position.set(d.at, 0, hingeS);
+    const leaf = new THREE.Group();
+    const glassy = d.glassWall || d.main;
+    const leafW = w, leafH = DOOR_H - 0.01, th = 0.04;
+    if (glassy) {
+      const fr = (x0, x1, y0, y1) => { const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, th), M.frame); m.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0); leaf.add(m); };
+      fr(0, 0.05, 0, leafH); fr(leafW - 0.05, leafW, 0, leafH); fr(0, leafW, 0, 0.08); fr(0, leafW, leafH - 0.05, leafH);
+      const gl = new THREE.Mesh(new THREE.BoxGeometry(leafW - 0.1, leafH - 0.13, 0.01), glassLeafMat); gl.position.set(leafW / 2, 0.08 + (leafH - 0.13) / 2, 0); gl.renderOrder = 2; leaf.add(gl);
+      const fb = new THREE.Mesh(new THREE.BoxGeometry(leafW - 0.1, 0.4, 0.014), M.frost); fb.position.set(leafW / 2, 1.2, 0); leaf.add(fb);
+    } else {
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(leafW, leafH, th), M.doorWood);
+      slab.position.set(leafW / 2, leafH / 2, 0);
+      slab.castShadow = true; slab.receiveShadow = true;
+      leaf.add(slab);
+    }
+    for (const s of [-1, 1]) {
+      const h = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.018, 0.018), M.handle);
+      h.position.set(leafW - 0.11, 1.0, s * (th / 2 + 0.03));
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.03, 8), M.handle);
+      st.rotation.x = Math.PI / 2; st.position.set(leafW - 0.06, 1.0, s * (th / 2 + 0.015));
+      leaf.add(h, st);
+    }
+    if (hingeAtTo) leaf.scale.x = -1; // la hoja se extiende hacia "from"
+    pivot.add(leaf);
+    // orientación base: la hoja a lo largo de la pared
+    pivot.rotation.y = d.horiz ? 0 : -Math.PI / 2;
+    const base = pivot.rotation.y;
+    // ángulo de apertura hacia el lado de la sala
+    let open = -roomSide * (Math.PI / 2) * 0.94;
+    if (!d.horiz) open = roomSide * (Math.PI / 2) * 0.94 * (hingeAtTo ? -1 : 1) * -1;
+    if (d.horiz && hingeAtTo) open = -open;
+    root.add(pivot);
+    const center = d.horiz ? new THREE.Vector3((d.from + d.to) / 2, 1, d.at) : new THREE.Vector3(d.at, 1, (d.from + d.to) / 2);
+    doors.push({ id: d.id, pivot, base, open, t: 0, target: 0, center, glassy });
+  }
+  // Corrige el sentido de apertura verificando que la hoja abierta quede del lado de la sala
+  for (const dr of doors) {
+    const spec = doorSpecs.find((s) => s.id === dr.id);
+    const room = ROOMS.find((r) => r.id === spec.room);
+    const rc = new THREE.Vector3((room.x0 + room.x1) / 2, 1, (room.z0 + room.z1) / 2);
+    const test = (ang) => {
+      dr.pivot.rotation.y = dr.base + ang;
+      dr.pivot.updateMatrixWorld(true);
+      const tip = new THREE.Vector3(0.4, 1, 0).applyMatrix4(dr.pivot.children[0].matrixWorld);
+      return tip.distanceTo(rc);
+    };
+    if (test(-dr.open) < test(dr.open)) dr.open = -dr.open;
+    dr.pivot.rotation.y = dr.base;
+  }
+  const updateDoors = (dt, playerPos, forceOpen = false) => {
+    const events = [];
+    for (const dr of doors) {
+      const near = playerPos && Math.hypot(playerPos.x - dr.center.x, playerPos.z - dr.center.z) < 2.1;
+      const tgt = forceOpen || near ? 1 : 0;
+      if (tgt !== dr.target) { dr.target = tgt; events.push({ id: dr.id, open: !!tgt, pos: dr.center, glassy: dr.glassy }); }
+      const k = 1 - Math.exp(-dt * (dr.target ? 7 : 4));
+      dr.t += (dr.target - dr.t) * k;
+      const e = dr.t * dr.t * (3 - 2 * dr.t);
+      dr.pivot.rotation.y = dr.base + dr.open * e;
+    }
+    return events;
+  };
+
   // ── cielorraso + paneles LED 60×60 ──
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(16, 12), M.ceiling);
   ceil.rotation.x = Math.PI / 2;
   ceil.position.set(8, H, 6);
   ceil.name = 'ceiling';
-  ceil.receiveShadow = false;
   root.add(ceil);
-
   const panelSpots = [];
   for (const r of ROOMS) {
     const w = r.x1 - r.x0, d = r.z1 - r.z0;
     const nx = Math.max(1, Math.round(w / 2.4)), nz = Math.max(1, Math.round(d / 2.4));
     for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
       const x = r.x0 + (w * (i + 0.5)) / nx, z = r.z0 + (d * (j + 0.5)) / nz;
-      panelSpots.push([Math.round(x / 0.6) * 0.6 - 0.3 + 0.3, Math.round(z / 0.6) * 0.6]);
+      panelSpots.push([Math.round(x / 0.6) * 0.6, Math.round(z / 0.6) * 0.6]);
     }
   }
-  const pg = new THREE.BoxGeometry(0.58, 0.02, 0.58);
+  const pg = new THREE.BoxGeometry(0.58, 0.016, 0.58);
   const panels = new THREE.InstancedMesh(pg, M.panel, panelSpots.length);
   const mtx = new THREE.Matrix4();
-  panelSpots.forEach(([x, z], i) => panels.setMatrixAt(i, mtx.makeTranslation(x, H - 0.01, z)));
+  panelSpots.forEach(([x, z], i) => panels.setMatrixAt(i, mtx.makeTranslation(x, H - 0.009, z)));
   panels.name = 'ceiling-panels';
   root.add(panels);
 
-  // ── exterior visible por las ventanas ──
+  // ── exterior ──
   const city = new THREE.Mesh(new THREE.PlaneGeometry(40, 14), new THREE.MeshBasicMaterial({ map: cityTexture(), toneMapped: false }));
   city.position.set(8, 3, -9);
   root.add(city);
-  // losa exterior para que no se vea vacío debajo
-  const slabTex = (() => {
-    const c = document.createElement('canvas'); c.width = c.height = 256;
-    const g = c.getContext('2d'); g.fillStyle = '#121b2b'; g.fillRect(0, 0, 256, 256);
-    g.strokeStyle = 'rgba(96,165,250,0.16)'; g.lineWidth = 2; g.strokeRect(0, 0, 256, 256);
-    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(60, 40); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
-  })();
-  const slab = new THREE.Mesh(new THREE.PlaneGeometry(60, 40), new THREE.MeshStandardMaterial({ map: slabTex, roughness: 1 }));
-  slab.rotation.x = -Math.PI / 2; slab.position.set(8, -0.01, 6);
+  // piso de estudio blanco (vista maqueta) — recibe sombras
+  const slab = new THREE.Mesh(new THREE.CircleGeometry(120, 64), new THREE.MeshStandardMaterial({ color: 0xf1f2f4, roughness: 1 }));
+  slab.rotation.x = -Math.PI / 2; slab.position.set(8, -0.012, 6);
+  slab.receiveShadow = true;
   root.add(slab);
-  // techo exterior (vista plano) — tapa negra por encima del cielorraso
-  // losa de hormigón sobre el plenum (se ve en rayos X desde adentro)
-  const roof = new THREE.Mesh(new THREE.PlaneGeometry(16.3, 12.3), new THREE.MeshStandardMaterial({ color: 0x3a4250, roughness: 0.95, side: THREE.DoubleSide }));
+  // zócalo exterior del edificio (base de la maqueta)
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(16.24, 0.12, 12.24), new THREE.MeshStandardMaterial({ color: 0xd9dbde, roughness: 0.9 }));
+  plinth.position.set(8, -0.07, 6);
+  root.add(plinth);
+  // losa sobre el plenum (rayos X)
+  const roof = new THREE.Mesh(new THREE.PlaneGeometry(16.3, 12.3), new THREE.MeshStandardMaterial({ color: 0x5b6270, roughness: 0.95, side: THREE.DoubleSide }));
   roof.rotation.x = -Math.PI / 2; roof.position.set(8, H + 0.35, 6);
   roof.name = 'roof';
   root.add(roof);
 
-  // ── carteles de salas (lado circulación) ──
-  const signMat = (txt) => new THREE.MeshStandardMaterial({ map: textCanvas(txt.toUpperCase(), { w: 512, h: 112, bg: '#243447', fg: '#ffffff', size: 40, radius: 18 }), roughness: 0.5 });
+  // ── carteles de salas ──
   const signs = [];
   for (const d of DOORS) {
     const room = ROOMS.find((r) => r.id === d.room);
     if (!room || d.open || d.main) continue;
-    const g = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.135), signMat(room.name));
-    const mid = d.to + 0.42;
+    const mat = new THREE.MeshStandardMaterial({ map: textCanvas(room.name, { w: 512, h: 112, bg: '#ffffff', fg: '#1d232b', size: 38, font: 600, radius: 10 }), roughness: 0.5 });
+    cutMaterials.add(mat);
+    const g = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.11), mat);
     if (d.wall === 'z') {
-      // de qué lado está la circulación
-      const side = d.at === 6 ? 1 : d.at === 8 ? -1 : 1;
-      g.position.set(mid, 1.62, d.at + side * (T / 2 + 0.006));
+      const side = d.at === 6 ? 1 : -1;
+      g.position.set(d.to + JAMB + 0.32, 1.62, d.at + side * (T / 2 + 0.004));
       if (side < 0) g.rotation.y = Math.PI;
     } else {
-      // puertas de boxes sobre el pasillo de boxes
       const side = d.at === 6.5 ? 1 : -1;
-      g.position.set(d.at + side * (T / 2 + 0.006), 1.62, d.to + 0.42);
+      const s = d.at === 7.5 ? d.from - JAMB - 0.32 : d.to + JAMB + 0.32;
+      g.position.set(d.at + side * (0.07 / 2 + 0.004), 1.62, s);
       g.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
     }
     root.add(g);
@@ -223,29 +363,35 @@ export function buildBuilding(scene, colliders) {
   // Logo del cliente en recepción (pared norte, cara sur)
   const logoTex = (() => {
     const c = document.createElement('canvas');
-    c.width = 1024; c.height = 300;
+    c.width = 2048; c.height = 600;
     const g = c.getContext('2d');
     g.fillStyle = '#1f3a64';
-    [[40, 150, 46, 110], [100, 110, 46, 150], [160, 60, 46, 200]].forEach(([x, y, w, h]) => { g.beginPath(); g.roundRect(x, y, w, h, 6); g.fill(); });
+    [[80, 300, 92, 220], [200, 220, 92, 300], [320, 120, 92, 400]].forEach(([x, y, w, h]) => { g.beginPath(); g.roundRect(x, y, w, h, 12); g.fill(); });
     g.fillStyle = '#1f2937';
-    g.fillRect(240, 50, 6, 210);
-    g.font = '700 104px Inter Variable, Inter, sans-serif';
+    g.fillRect(480, 100, 10, 420);
+    // el texto se ajusta al ancho disponible (antes se cortaba en "Asoc")
+    const fit = (txt, weight, size, maxW) => { let sz = size; do { g.font = `${weight} ${sz}px Inter Variable, Inter, sans-serif`; sz -= 4; } while (g.measureText(txt).width > maxW && sz > 20); };
     g.textBaseline = 'alphabetic';
-    g.fillText('Alvarez & Asoc.', 280, 170);
-    g.font = '500 46px Inter Variable, Inter, sans-serif';
+    fit('Alvarez & Asoc.', 700, 208, 2048 - 560 - 60);
+    g.fillText('Alvarez & Asoc.', 560, 340);
+    fit('Estudio contable', 500, 84, 2048 - 560 - 60);
     g.fillStyle = '#4b5563';
-    g.fillText('E s t u d i o   c o n t a b l e', 284, 240);
+    g.fillText('Estudio contable', 568, 480);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
     return t;
   })();
-  const logo = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.7), new THREE.MeshStandardMaterial({ map: logoTex, transparent: true, roughness: 0.6 }));
-  logo.position.set(4.35, 1.75, 8 + T / 2 + 0.006);
+  const logoMat = new THREE.MeshStandardMaterial({ map: logoTex, transparent: true, roughness: 0.6 });
+  const logo = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.7), logoMat);
+  logo.position.set(4.35, 1.75, 8 + T / 2 + 0.008);
   root.add(logo);
-  // acento de color detrás del logo
-  const accentWall = new THREE.Mesh(new THREE.PlaneGeometry(2.9, H - 0.08), new THREE.MeshStandardMaterial({ color: 0xe9eef5, roughness: 0.9 }));
-  accentWall.position.set(4.35, H / 2 + 0.04, 8 + T / 2 + 0.003);
-  root.add(accentWall);
+  cutMaterials.add(logoMat);
 
-  return { root, wallsMesh, city, slab, ceiling: ceil, roof, panels, glassMesh, materials: M, signs };
+  const setCut = (on) => {
+    for (const m of cutMaterials) { m.clippingPlanes = on ? [cutPlane] : null; m.needsUpdate = true; }
+  };
+  const addCutMaterial = (m) => cutMaterials.add(m);
+
+  return { root, logo, wallsMesh, city, slab, plinth, ceiling: ceil, roof, panels, glassMesh, materials: M, signs, doors, updateDoors, setCut, addCutMaterial, panelSpots };
 }
