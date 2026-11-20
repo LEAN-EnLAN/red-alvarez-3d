@@ -36,7 +36,13 @@ export const DEFS = {
     async run(f, ctx) {
       const r = await sim.ping(f.src, f.dst);
       ctx.last = r.ok;
-      ctx.log(r.ok, `ping ${f.src} → ${f.dst}`, r.ok ? `${r.received}/${r.sent} respuestas${r.via ? ` · salió por ${r.via === 'claro' ? 'Claro' : 'Personal'}` : ''}` : r.reason, r.lines.join('\n'));
+      const a = sim.resolve(f.src)?.ep, b = sim.resolve(f.dst)?.ep;
+      const dn = f.dst === 'INTERNET' ? 'internet' : `el ${f.dst}`;
+      const router = r.path?.some((x) => x.id === 'rack:ER605');
+      const fiber = r.path?.some((x) => x.id === 'fiber');
+      const how = r.via ? ` saliendo por ${r.via === 'claro' ? 'Claro' : 'Personal'}` : router ? ` pasando por el router${a?.vlan && b?.vlan ? ` (${VNAME(a.vlan)} → ${VNAME(b.vlan)})` : ''}` : ` por el switch${a?.vlan ? `, dentro de la ${VNAME(a.vlan)}` : ''}`;
+      const title = r.ok ? `${f.src} llegó a ${dn}${how}${fiber ? ', cruzando la fibra' : ''}.` : `${f.src} no llega a ${dn}.`;
+      ctx.log(r.ok, title, r.ok ? `${r.received} de ${r.sent} respuestas.` : r.reason, r.lines.join('\n'), 'ping', f);
     },
   },
   trace: {
@@ -214,6 +220,24 @@ export const DEFS = {
     },
   },
 };
+// Qué hace cada bloque, en una línea (se muestra en la paleta)
+const DESC = {
+  ping: 'Comprueba si un equipo llega a otro.',
+  trace: 'Muestra por dónde pasa el paquete, salto por salto.',
+  wifi: 'Conecta un celular o notebook a una red Wi-Fi.',
+  vpn: 'Un empleado externo entra por la VPN WireGuard.',
+  port: 'Asigna la VLAN de un puerto del switch.',
+  portState: 'Apaga o enciende un puerto del switch.',
+  call: 'Llama entre internos o hacia afuera.',
+  backup: 'Copia NAS1 a NAS2 y a la nube.',
+  file: 'Borra o recupera un archivo del NAS1.',
+  wan: 'Simula que se cae (o vuelve) un proveedor.',
+  power: 'Simula un corte de luz: entran las UPS.',
+  wait: 'Pausa antes del siguiente paso.',
+  repeat: 'Repite los bloques de adentro.',
+  ifok: 'Ejecuta lo de adentro solo si se cumple la condición.',
+};
+const VNAME = (v) => (v ? `VLAN${v}` : '');
 const PALETTE = ['ping', 'trace', 'wifi', 'vpn', 'port', 'portState', 'call', 'backup', 'file', 'wan', 'power', 'wait', 'repeat', 'ifok'];
 
 let uid = 0;
@@ -230,56 +254,66 @@ export function createBlocks() {
   root.className = 'bk';
   root.innerHTML = `
     <aside class="bk-pal" aria-label="Bloques disponibles">
-      <div class="bk-cats"></div>
       <div class="bk-list scroll"></div>
       <div class="bk-trash">Soltá acá para borrar</div>
     </aside>
     <section class="bk-main">
+      <p class="bk-intro">Armá una prueba con bloques y tocá <b>Ejecutar</b>: los paquetes recorren los cables de la oficina.</p>
       <div class="bk-bar">
-        <button class="btn primary sm bk-run"><span>▶</span> Ejecutar</button>
-        <button class="btn sm bk-stop" disabled>■ Detener</button>
+        <button class="btn primary sm bk-run">Ejecutar</button>
+        <button class="btn sm bk-stop" disabled>Detener</button>
         <span class="bk-grow"></span>
-        <button class="btn sm ghost bk-reset" title="Volver la red al diseño del TP">↺ Red del TP</button>
+        <button class="btn sm ghost bk-reset" title="Volver la red al diseño del TP">Restablecer red</button>
         <button class="btn sm ghost bk-clear">Vaciar</button>
       </div>
-      <div class="bk-script scroll"><div class="bk-canvas"><div class="blk hat" style="--c:${CATS.evento.c}"><div class="blk-row">cuando se hace clic en <b class="flag">▶</b></div></div><div class="bk-root" data-list=""></div><div class="bk-ind hidden"></div><div class="bk-empty">Arrastrá bloques acá<span class="bk-empty-m"> · o tocá uno para agregarlo</span></div></div></div>
+      <div class="bk-script scroll"><div class="bk-canvas"><div class="blk hat" style="--c:${CATS.evento.c}"><div class="blk-row">cuando se hace clic en <b class="flag">▶</b></div></div><div class="bk-root" data-list=""></div><div class="bk-ind hidden"></div><div class="bk-empty">Arrastrá un bloque acá<span class="bk-empty-m"> · o tocalo en la lista</span></div></div></div>
     </section>
     <aside class="bk-side">
-      <div class="bk-tabs"><button class="on" data-v="out">Resultado</button><button data-v="code">Por dentro</button></div>
-      <div class="bk-out scroll"><div class="bk-out-empty">Armá un programa y tocá <b>▶ Ejecutar</b>. Vas a ver los paquetes viajar por la oficina y la topología.</div></div>
+      <div class="bk-tabs"><button class="on" data-v="out">Resultado</button><button data-v="code">Código</button></div>
+      <div class="bk-out scroll"><div class="bk-out-empty">Ya hay un ejemplo listo: <b>¿PC03 llega al NAS1?</b> Tocá <b>Ejecutar</b> para probarlo.</div></div>
       <div class="bk-code scroll hidden"></div>
     </aside>`;
   const $ = (s) => root.querySelector(s);
-  const listEl = $('.bk-list'), catsEl = $('.bk-cats'), rootList = $('.bk-root'), canvas = $('.bk-canvas'), ind = $('.bk-ind');
+  const listEl = $('.bk-list'), rootList = $('.bk-root'), canvas = $('.bk-canvas'), ind = $('.bk-ind');
   const out = $('.bk-out'), code = $('.bk-code');
   let script = [];
   let running = false;
   const ctx = { stopped: false, last: null };
 
-  // ── paleta ──
-  for (const [k, c] of Object.entries(CATS)) {
-    if (k === 'evento') continue;
-    const b = document.createElement('button');
-    b.className = 'bk-cat';
-    b.innerHTML = `<i style="background:${c.c}"></i>${c.name}`;
-    b.onclick = () => listEl.querySelector(`[data-cat="${k}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'start' });
-    catsEl.appendChild(b);
-  }
-  let lastCat = null;
-  for (const t of PALETTE) {
-    const d = DEFS[t];
-    if (d.cat !== lastCat) {
-      const h = document.createElement('div');
-      h.className = 'bk-h';
-      h.dataset.cat = d.cat;
-      h.textContent = CATS[d.cat].name;
-      listEl.appendChild(h);
-      lastCat = d.cat;
-    }
+  // ── paleta: categorías plegables, cada bloque con su descripción ──
+  const ORDER = ['pruebas', 'red', 'servicios', 'fallas', 'control'];
+  const palItem = (t) => {
+    const w = document.createElement('div');
+    w.className = 'bk-item';
     const b = renderBlock(mk(t), true);
     b.dataset.new = t;
-    listEl.appendChild(b);
+    b.title = DESC[t];
+    w.appendChild(b);
+    const d = document.createElement('div');
+    d.className = 'bk-desc';
+    d.textContent = DESC[t];
+    w.appendChild(d);
+    return w;
+  };
+  const group = (title, types, open, cls = '') => {
+    const g = document.createElement('details');
+    g.className = 'bk-grp ' + cls;
+    g.open = open;
+    g.innerHTML = `<summary><span>${title}</span><em>${types.length}</em></summary>`;
+    for (const t of types) g.appendChild(palItem(t));
+    return g;
+  };
+  let focus = null;
+  function renderPalette() {
+    listEl.innerHTML = '';
+    if (focus?.length) {
+      listEl.appendChild(group('Para esta misión', focus, true, 'focus'));
+      const all = group('Todos los bloques', [], false);
+      for (const k of ORDER) all.appendChild(group(CATS[k].name, PALETTE.filter((t) => DEFS[t].cat === k), false, 'sub'));
+      listEl.appendChild(all);
+    } else ORDER.forEach((k, i) => listEl.appendChild(group(CATS[k].name, PALETTE.filter((t) => DEFS[t].cat === k), i === 0)));
   }
+  renderPalette();
 
   function renderBlock(b, inPalette = false) {
     const d = DEFS[b.type];
@@ -559,10 +593,13 @@ export function createBlocks() {
     const t0 = Date.now();
     while (Date.now() - t0 < ms && !ctx.stopped) await sleep(50);
   };
-  ctx.log = (ok, title, detail = '', pre = '') => {
+  ctx.log = (ok, title, detail = '', pre = '', type = ctx.cur?.type, f = ctx.cur?.f) => {
     const e = document.createElement('div');
     e.className = `lg ${ok ? 'ok' : 'bad'}`;
-    e.innerHTML = `<span class="lg-i">${ok ? '✓' : '✕'}</span><div class="lg-b"><div class="lg-t">${escapeHtml(title)}</div>${detail ? `<div class="lg-d">${escapeHtml(detail)}</div>` : ''}${pre ? `<details><summary>ver salida</summary><pre>${escapeHtml(pre)}</pre></details>` : ''}</div>`;
+    const low = type && f ? DEFS[type].low(f) : [];
+    const cmds = low.map((l) => `<div class="cd-dev">${escapeHtml(l.dev)}</div><pre>${l.lines.map(escapeHtml).join('\n')}</pre>`).join('');
+    const more = cmds || pre ? `<details><summary>Ver comandos</summary>${cmds}${pre ? `<div class="cd-dev">Salida</div><pre>${escapeHtml(pre)}</pre>` : ''}</details>` : '';
+    e.innerHTML = `<span class="lg-i">${ok ? '✓' : '✕'}</span><div class="lg-b"><div class="lg-t">${escapeHtml(title)}</div>${detail ? `<div class="lg-d">${escapeHtml(detail)}</div>` : ''}${more}</div>`;
     out.appendChild(e);
     out.scrollTop = out.scrollHeight;
   };
@@ -572,6 +609,7 @@ export function createBlocks() {
       const el = canvas.querySelector(`[data-id="${b.id}"]`);
       el?.classList.add('run');
       el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      ctx.cur = b;
       try {
         await DEFS[b.type].run(b.f, ctx, b);
       } catch (err) {
@@ -623,6 +661,7 @@ export function createBlocks() {
   }
   root.querySelectorAll('.bk-tabs button').forEach((b) => (b.onclick = () => showTab(b.dataset.v)));
 
+  script = [mk('ping', { src: 'PC03', dst: 'NAS1' })];
   render();
   return {
     el: root,
@@ -630,8 +669,11 @@ export function createBlocks() {
       if (running) return;
       script = preset.map((p) => mk(p.type, p.f));
       render();
-      showTab('code');
+      showTab('out');
+      out.innerHTML = '<div class="bk-out-empty">Bloques de la misión cargados. Ajustá lo que haga falta y tocá <b>Ejecutar</b>.</div>';
     },
+    // muestra primero solo los bloques que necesita una misión (null = todos)
+    setFocus(types) { focus = types?.length ? [...new Set(types)].filter((t) => DEFS[t]) : null; renderPalette(); },
     run,
     get script() { return script; },
   };

@@ -8,6 +8,7 @@ import { createBlocks, escapeHtml } from './blocks.js';
 import { createSession, suggest, tabComplete, CONSOLE_DEVICES } from './console.js';
 import { createTopology } from './topology.js';
 import { missions, MISSIONS, mountMissionTracker } from './missions.js';
+import { createTaller } from './taller.js';
 
 export { mountMissionTracker, missions, sim };
 
@@ -15,6 +16,7 @@ const TABS = [
   { id: 'blocks', name: 'Bloques', icon: '<svg viewBox="0 0 24 24"><path d="M4 5h7l1 1.5h8v4H12l-1 1.5H4z M4 14h10l1 1.5h5v3.5H4z" fill="currentColor"/></svg>' },
   { id: 'console', name: 'Consola', icon: '<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z" fill="none" stroke="currentColor" stroke-width="1.8" rx="2"/><path d="M7 9l3 3-3 3M12 15h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' },
   { id: 'topo', name: 'Topología', icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.4" fill="currentColor"/><circle cx="5" cy="18" r="2.4" fill="currentColor"/><circle cx="19" cy="18" r="2.4" fill="currentColor"/><path d="M12 7.5v4M12 11.5L5 15.5M12 11.5l7 4" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>' },
+  { id: 'taller', name: 'Taller', icon: '<svg viewBox="0 0 24 24"><path d="M7 3h10v7l-2 2v3H9v-3l-2-2z M10 15v6M14 15v6M10 6v2M12 6v2M14 6v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>' },
   { id: 'missions', name: 'Misiones', icon: '<svg viewBox="0 0 24 24"><path d="M5 4v17M5 5h11l-2 3.5 2 3.5H5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>' },
 ];
 
@@ -32,16 +34,17 @@ export function initLab() {
       <header class="lab-head">
         <div class="lab-brand">
           <div class="lab-logo"><svg viewBox="0 0 24 24"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg></div>
-          <div><div class="lab-title">Laboratorio de red</div><div class="lab-sub">Simulador (modelo del TP) · los paquetes se ven en la oficina</div></div>
+          <div><div class="lab-title">Laboratorio</div><div class="lab-sub">Simulación basada en el TP</div></div>
         </div>
         <div class="lab-status"></div>
-        <button class="lab-close btn ghost" aria-label="Cerrar laboratorio" title="Cerrar (Esc)">✕</button>
+        <button class="lab-close btn" aria-label="Volver a la oficina" title="Volver a la oficina (Esc)">Volver a la oficina</button>
       </header>
       <nav class="lab-tabs" role="tablist">${TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.icon}<span>${t.name}</span></button>`).join('')}</nav>
       <div class="lab-views">
         <div class="lab-view" data-view="blocks"></div>
         <div class="lab-view" data-view="console"></div>
         <div class="lab-view" data-view="topo"></div>
+        <div class="lab-view" data-view="taller"></div>
         <div class="lab-view" data-view="missions"></div>
       </div>
     </div>`;
@@ -79,6 +82,11 @@ export function initLab() {
   $('[data-view="topo"]').appendChild(topoView);
   const mis = buildMissions(blocks, (tab) => show(tab));
   $('[data-view="missions"]').appendChild(mis.el);
+  $('[data-view="taller"]').appendChild(createTaller().el);
+  // con una misión activa, la paleta muestra primero solo los bloques que hacen falta
+  const syncFocus = () => blocks.setFocus?.(missions.current?.preset?.map((p) => p.type) || null);
+  for (const ev of ['mission:start', 'mission:update', 'mission:done']) bus.on(ev, syncFocus);
+  syncFocus();
 
   let current = 'blocks';
   function show(tab) {
@@ -258,12 +266,12 @@ function buildTopoView(onNode) {
   el.className = 'tp';
   el.innerHTML = `
     <div class="tp-bar">
-      <button class="btn sm" data-a="ping">▶ Ping PC03 → NAS1</button>
-      <button class="btn sm" data-a="visit">▶ Visita → NAS1</button>
+      <button class="btn sm" data-a="ping">Ping PC03 → NAS1</button>
+      <button class="btn sm" data-a="visit">Visita → NAS1</button>
       <button class="btn sm" data-a="claro"></button>
       <button class="btn sm" data-a="power"></button>
       <span class="bk-grow"></span>
-      <button class="btn sm ghost" data-a="reset">↺ Red como el TP</button>
+      <button class="btn sm ghost" data-a="reset">Restablecer red</button>
     </div>
     <div class="tp-stage"></div>
     <div class="tp-legend">
@@ -276,8 +284,8 @@ function buildTopoView(onNode) {
   el.querySelector('.tp-stage').appendChild(topo.el);
   const btn = (a) => el.querySelector(`[data-a="${a}"]`);
   const paint = () => {
-    btn('claro').textContent = sim.wan.claro ? '✂ Cortar Claro' : '↺ Restaurar Claro';
-    btn('power').textContent = sim.mains ? '⚡ Cortar energía' : '↺ Restaurar energía';
+    btn('claro').textContent = sim.wan.claro ? 'Cortar Claro' : 'Restaurar Claro';
+    btn('power').textContent = sim.mains ? 'Cortar energía' : 'Restaurar energía';
   };
   paint();
   bus.on('sim:change', paint);
@@ -334,7 +342,7 @@ function buildMissions(blocks, showTab) {
         <ol class="ms-steps">
           ${m.steps.map((s, i) => `<li class="${steps[i] ? 'ok' : st === 'active' && i === curI ? 'cur' : ''}">
             <span class="ms-ck">${steps[i] ? '✓' : i + 1}</span>
-            <div><div>${s.text}</div>${st === 'active' && i === curI ? `<div class="ms-hint">💡 ${s.hint}</div>` : ''}</div></li>`).join('')}
+            <div><div>${s.text}</div>${st === 'active' && i === curI ? `<div class="ms-hint">Pista: ${s.hint}</div>` : ''}</div></li>`).join('')}
         </ol>
         <div class="ms-actions">
           ${st === 'active'

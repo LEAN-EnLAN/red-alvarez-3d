@@ -22,6 +22,7 @@ import { tubeFrom } from './world/paths.js';
 import { applyGenAssets } from './world/genwire.js';
 import { HUD, InfoPanel, showHelp } from './ui/hud.js';
 import { Presenter } from './ui/present.js';
+import { PauseMenu } from './ui/pause.js';
 import { createLoader } from './ui/loading.js';
 import { roomAt, OUTLETS, ROOMS, DEVICES, VLANS, TRUNK_COLOR } from './data/tp.js';
 
@@ -146,6 +147,9 @@ const info = new InfoPanel();
 const input = new Input(canvas, hud.root);
 const player = new Player(camera, colliders);
 player.apply();
+// el menú reemite los ajustes guardados al construirse: va después del jugador y del audio
+const pause = new PauseMenu({ onResume: () => { if (!isTouch && mode === 'explore') canvas.requestPointerLock?.(); } });
+bus.on('ui:menu', () => { if (mode !== 'loading' && !pause.isOpen) pause.open(); });
 
 let world, interactor, packets;
 let mode = 'loading'; // loading | explore | inspect | orbit | present | cinematic
@@ -266,6 +270,7 @@ const presenter = new Presenter({
 
 bus.on('ui:mode', ({ mode: m }) => {
   if (mode === 'loading') return;
+  if (['present', 'lab', 'plan', 'full'].includes(m) && pause.isOpen) pause.close();
   if (m === 'xray') setXray(!xray);
   if (m === 'plan') mode === 'orbit' ? enterExplore() : enterOrbit();
   if (m === 'present') presenter.active ? presenter.exit() : presenter.start(0);
@@ -438,7 +443,7 @@ const NAMES = (id) => {
 };
 input.on('key', (e) => {
   if (mode === 'loading' || mode === 'cinematic') return;
-  if (document.querySelector('.modal-bg, .pause-open')) return;
+  if (pause.isOpen || document.querySelector('.modal-bg')) return;
   switch (e.code) {
     case 'KeyE': if (mode === 'explore') useTarget(interactor?.current?.id); else if (mode === 'inspect') info.close(); break;
     case 'KeyX': setXray(!xray); break;
@@ -451,7 +456,7 @@ input.on('key', (e) => {
 // Esc en primera persona libera el puntero → menú de pausa
 input.on('lock', (locked) => {
   hud.setLocked(locked, mode === 'explore');
-  if (!locked && mode === 'explore' && !info.isOpen && !labOpen) bus.emit('ui:menu');
+  if (!locked && mode === 'explore' && !info.isOpen && !labOpen && !pause.isOpen) pause.open();
 });
 input.on('lockfail', () => { if (hud.lockhint) hud.lockhint.textContent = 'Arrastrá con el mouse para mirar'; });
 const ndc = new THREE.Vector2();
@@ -472,7 +477,7 @@ canvas.addEventListener('click', (e) => {
 
 // ───────── laboratorio (carga diferida) ─────────
 let labOpen = false;
-bus.on('lab:open', () => { labOpen = true; input.enabled = false; document.exitPointerLock?.(); });
+bus.on('lab:open', () => { if (pause.isOpen) pause.close(); labOpen = true; input.enabled = false; document.exitPointerLock?.(); });
 bus.on('lab:close', () => { labOpen = false; input.enabled = true; });
 import('./lab/lab.js').then((m) => { m.initLab?.(); m.mountMissionTracker?.(); window.__app.sim = m.sim; }).catch((e) => console.warn('Laboratorio no disponible', e));
 
@@ -526,7 +531,7 @@ renderer.setAnimationLoop(() => {
   const raw = clock.getDelta();
   const dt = Math.min(0.05, raw);
   frame++;
-  if (mode === 'explore' && !labOpen) player.update(dt, input);
+  if (mode === 'explore' && !labOpen && !pause.isOpen) player.update(dt, input);
   else input.consumeLook();
   updateFly(Math.min(raw, 0.25));
   if (orbit.enabled) orbit.update();

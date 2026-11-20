@@ -64,7 +64,7 @@ export const SLIDES = [
   },
   {
     id: 'tendido', n: '04', kicker: 'Tendido y tomas', title: '23 cables permanentes · 472 m',
-    cam: { pos: [7.2, 1.6, 5.6], target: [9.3, 1.0, 4.05] }, route: 'PC03',
+    cam: { pos: [9.7, 1.6, 5.45], target: [8.45, 1.0, 3.3] }, route: 'PC03',
     html: () => TEXT.tendido.map(p).join('') + '<p class="tiny">Se muestra el recorrido de PC03 → R1-PP1-03 → SW1/3 (21 m).</p>',
   },
   {
