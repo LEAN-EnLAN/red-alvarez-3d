@@ -645,4 +645,4 @@ addEventListener('resize', () => {
   aoPass?.setSize?.(innerWidth, innerHeight);
 });
 // debug/automatización
-window.__app = { camera, player, flyTo, presenter, setXray, enterOrbit, enterExplore, bus, get world() { return world; }, get mode() { return mode; }, renderer, scene, info, building, useTarget, setView };
+window.__app = { wallColliders, camera, player, flyTo, presenter, setXray, enterOrbit, enterExplore, bus, get world() { return world; }, get mode() { return mode; }, renderer, scene, info, building, useTarget, setView };

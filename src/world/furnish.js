@@ -212,7 +212,8 @@ export async function furnish(scene, colliders, { manager, quality }) {
     screens.push(mon.group);
     p = at(-0.05, 0.12); place(D.buildKeyboard(), p[0], top, p[1], th);
     p = at(0.3, 0.14); place(D.buildMouse(), p[0], top, p[1], th);
-    p = at(side * (w / 2 - 0.2), -0.08); const pc = place(D.buildPCTower(name), p[0], 0, p[1], th - side * Math.PI / 2);
+    // la torre queda entre la pata y el centro, sin tocar la columna ni el pie del escritorio
+    p = at(side * (w / 2 - 0.33), -0.08); const pc = place(D.buildPCTower(name), p[0], 0, p[1], th - side * Math.PI / 2);
     usePicks(pc, name); usePicks(mon, name);
     register(name, desk.group, 'pc', { group: [desk.group, pc.group, mon.group] });
     desk.group.traverse((o) => { if (o.isMesh && o.userData.pickId === undefined) o.userData.pickId = name; });
@@ -311,7 +312,17 @@ export async function furnish(scene, colliders, { manager, quality }) {
     paper.userData.pickId = 'DIAGRAMA';
     root.add(paper); pickables.push(paper);
     register('DIAGRAMA', paper, 'doc');
-    prop('projector_screen', tx, 8.3).then((o) => { if (!o) return; snapToWall(o, 'z', 8, 1, 0.02); o.traverse((m) => (m.userData.pickId = 'PRESENTACION')); pickables.push(o); register('PRESENTACION', o, 'doc'); addSolid('pantalla', o); });
+    // TV de pared (pared oeste, frente a la mesa): abre la presentación del TP
+    {
+      const tv = new THREE.Group(); tv.name = 'tv-reunion';
+      const bez = new THREE.Mesh(new THREE.BoxGeometry(1.46, 0.84, 0.045), new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: 0.4, metalness: 0.3 }));
+      const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.42, 0.8), new THREE.MeshStandardMaterial({ map: textCanvas(['Alvarez & Asoc.', 'Presentación del TP'], { w: 1024, h: 576, bg: '#1f3a64', fg: '#ffffff', size: 64, font: 700 }), emissive: 0xffffff, emissiveIntensity: 0.35, roughness: 0.2 }));
+      scr.name = 'tv-screen'; scr.position.z = 0.0235;
+      tv.add(bez, scr);
+      tv.position.set(6 + WT + 0.03, 1.45, tz); tv.rotation.y = Math.PI / 2;
+      root.add(tv);
+      tv.traverse((m) => (m.userData.pickId = 'PRESENTACION')); pickables.push(tv); register('PRESENTACION', tv, 'doc');
+    }
     propOn('ceramic_vase_01', tx + 0.7, tz - 0.15, tTop, 0, 0.8);
   }
 
@@ -604,7 +615,6 @@ export async function furnish(scene, colliders, { manager, quality }) {
   jobs.push(deco('wall_clock', 14.6, 6.1, { y: 2.0, snap: [['z', 6, 1, 0.002]], collide: false }));
   // Sala técnica y reunión
   jobs.push(deco('steel_frame_shelves_03', 12.5, 11.5, { snap: [['x', 12, 1], ['z', 12, -1]] }));
-  jobs.push(deco('hanging_picture_frame_01', 6.2, 10.1, { y: 1.5, rot: Math.PI / 2, snap: [['x', 6, 1, 0.002]], collide: false }));
   jobs.push(deco('potted_plant_02', 11.55, 11.55, { snap: [['x', 12, -1], ['z', 12, -1]] }));
   // carpeta sobre el escritorio de gerencia
   await Promise.all(jobs);

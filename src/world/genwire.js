@@ -86,7 +86,7 @@ const ART = [
   ['art_monumento_bandera', 11.0, 1.6, 8 - T2, '-z', 0.6],
   ['art_diploma', T2, 1.62, 2.76, '+x', 0.5],
   ['art_team_photo', 4 - T2, 1.62, 1.6, '-x', 0.52],
-  ['art_abstract_warm', 6 + T2, 1.6, 10.1, '+x', 0.7],
+  ['art_abstract_warm', 10.7, 1.6, 8 + T2, '+z', 0.6],
   ['art_numbers_print', 10 + T2, 1.6, 4.55, '+x', 0.55],
   ['art_abstract_blue_2', 16 - T2, 1.6, 4.2, '-x', 0.6],
   ['corkboard_tech_notes', 12 + T2, 1.45, 9.4, '+x', 0.7, 'cork'],
@@ -161,7 +161,7 @@ async function applyMore({ building, world }) {
     n++;
   }
   // cuadros y carteles en pared
-  const hideIfArt = { art_diploma: 'hanging_picture_frame_02', art_abstract_warm: 'hanging_picture_frame_01' };
+  const hideIfArt = { art_diploma: 'hanging_picture_frame_02' };
   for (const [id, x, y, z, face, h, kind] of ART) {
     if (!G.has(id)) continue;
     const g = await plane(id, h, { frame: kind || 'dark' });
@@ -179,6 +179,9 @@ async function applyMore({ building, world }) {
     building.root.add(g); g.traverse((o) => o.material && building.addCutMaterial(o.material));
     n++;
   }
+  // TV de la sala de reunión
+  const tvScr = world.root.getObjectByName('tv-screen');
+  if (tvScr && G.has('screen_tv_reunion')) { const t = G.texture('screen_tv_reunion', { wrap: false }); tvScr.material.map = t; tvScr.material.emissiveMap = t; tvScr.material.needsUpdate = true; n++; }
   // calcos de papeles sobre los escritorios (a la izquierda del teclado)
   let k = 0;
   for (const [, d] of world.deskBuilt) {
