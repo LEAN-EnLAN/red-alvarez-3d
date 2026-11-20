@@ -61,24 +61,24 @@ renderer.setPixelRatio(Q.dpr);
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 0.88;
 renderer.shadowMap.enabled = Q.shadows;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.localClippingEnabled = true;
 setMaxAniso(Math.min(8, renderer.capabilities.getMaxAnisotropy()));
 
 const scene = new THREE.Scene();
-const STUDIO = new THREE.Color(0xeceef1);
+const STUDIO = new THREE.Color(0xe2e5e9);
 scene.background = STUDIO.clone();
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = 0.6;
+scene.environmentIntensity = 0.4;
 
 const camera = new THREE.PerspectiveCamera(isTouch ? 72 : 70, innerWidth / innerHeight, 0.03, 160);
 // Luz: cielo/suelo cálido + una luz cenital suave con sombras (efecto de oclusión bajo muebles)
-const hemi = new THREE.HemisphereLight(0xffffff, 0xd9d6d0, 1.15);
+const hemi = new THREE.HemisphereLight(0xffffff, 0xcfcac2, 0.75);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xfff8f0, 1.9);
+const sun = new THREE.DirectionalLight(0xfff6ec, 1.35);
 sun.position.set(10.5, 18, 9.5);
 sun.target.position.set(8, 0, 6);
 sun.castShadow = Q.shadows;
@@ -89,7 +89,7 @@ sun.shadow.normalBias = 0.025;
 sun.shadow.radius = 5;
 scene.add(sun, sun.target);
 // luz de relleno de ventanas (norte)
-const fill = new THREE.DirectionalLight(0xdfeaff, 0.5);
+const fill = new THREE.DirectionalLight(0xdfeaff, 0.3);
 fill.position.set(8, 6, -10);
 scene.add(fill);
 
@@ -116,7 +116,7 @@ function buildComposer() {
   outlinePass.visibleEdgeColor.set(0x2f6bff);
   outlinePass.hiddenEdgeColor.set(0x2f6bff);
   composer.addPass(outlinePass);
-  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.22, 0.5, 0.92);
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.08, 0.35, 0.97);
   composer.addPass(bloomPass);
   composer.addPass(new OutputPass());
 }
@@ -148,7 +148,7 @@ const input = new Input(canvas, hud.root);
 const player = new Player(camera, colliders);
 player.apply();
 // el menú reemite los ajustes guardados al construirse: va después del jugador y del audio
-const pause = new PauseMenu({ onResume: () => { if (!isTouch && mode === 'explore') canvas.requestPointerLock?.(); } });
+const pause = new PauseMenu({ onResume: () => { if (mode === 'explore') input.lock(); } });
 bus.on('ui:menu', () => { if (mode !== 'loading' && !pause.isOpen) pause.open(); });
 
 let world, interactor, packets;
@@ -277,7 +277,7 @@ bus.on('ui:mode', ({ mode: m }) => {
   if (m === 'lab') bus.emit('lab:open', {});
   if (m === 'help') showHelp();
   if (m === 'full') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.().catch(() => {});
-  if (m === 'resume' && mode === 'explore' && !isTouch) canvas.requestPointerLock?.();
+  if (m === 'resume' && mode === 'explore') input.lock();
 });
 
 // ───────── inspección: la cámara encuadra el objeto ─────────
@@ -469,7 +469,7 @@ input.on('tap', ({ x, y }) => {
 });
 canvas.addEventListener('click', (e) => {
   if (isTouch || !interactor || mode === 'cinematic') return;
-  if (mode === 'explore') { if (input.dragLook && interactor.current) useTarget(interactor.current.id); return; }
+  if (mode === 'explore') { if (input.locked && interactor.current) useTarget(interactor.current.id); return; }
   if (mode === 'inspect') return;
   const r = pickAt(e.clientX, e.clientY, 80);
   if (r) info.open(r.id);
@@ -491,7 +491,7 @@ function captureInteriorEnv() {
   cube.update(renderer, scene);
   const env = pmrem.fromCubemap(crt.texture).texture;
   scene.environment = env;
-  scene.environmentIntensity = 0.9;
+  scene.environmentIntensity = 0.45;
   prevEnv?.dispose?.();
   crt.dispose();
 }
@@ -519,6 +519,7 @@ function captureInteriorEnv() {
   window.__app.audit = problems;
   loader.ready((go) => {
     enterExplore();
+    if (go !== 'present') input.lock(); // el clic en "Entrar" es el gesto que permite capturar el mouse
     if (go === 'present') presenter.start(0);
   });
 })();
@@ -542,7 +543,7 @@ renderer.setAnimationLoop(() => {
     const r = interactor.update(ndc.set(0, 0), 3.4);
     const it = r && world.interact.get(r.id);
     if (outlinePass) outlinePass.selectedObjects = r && !r.instance ? (it ? it.group || [it.object] : [r.hit.object]) : [];
-    interactor.box.visible = !!r?.instance;
+    interactor.box.visible = false; // sin cajas de selección: alcanza con el aviso junto a la mira
     hud.setPrompt(r ? `${isTouch ? '' : 'Inspeccionar '}<b>${NAMES(r.id)}</b>` : null);
   } else if (mode !== 'explore' && outlinePass && frame % 10 === 0) outlinePass.selectedObjects = [];
   if (mode === 'explore') {

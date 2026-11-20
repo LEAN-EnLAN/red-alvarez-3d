@@ -20,23 +20,29 @@ export class Input {
     addEventListener('blur', () => this.keys.clear());
 
     // Mouse
-    // Si el navegador/iframe no permite pointer lock, se mira arrastrando con el mouse
+    // Mirar: con el puntero capturado (pointer lock) o, mientras no esté capturado, arrastrando.
+    // Un intento fallido de captura (p. ej. Chrome bloquea ~1 s después de Esc) NO desactiva la captura:
+    // el próximo clic vuelve a intentarlo.
     this.dragLook = !canvas.requestPointerLock;
-    document.addEventListener('pointerlockerror', () => { this.dragLook = true; this.fire('lockfail'); });
+    this.lastDragMoved = 0;
+    document.addEventListener('pointerlockerror', () => this.fire('lockfail'));
     let drag = null;
-    canvas.addEventListener('mousedown', (e) => { if (this.dragLook && this.wantsLock && !isTouch) drag = { x: e.clientX, y: e.clientY, moved: 0 }; });
-    addEventListener('mouseup', () => { drag = null; });
+    canvas.addEventListener('mousedown', (e) => {
+      if (isTouch || !this.enabled || !this.wantsLock || this.locked || e.button !== 0) return;
+      drag = { x: e.clientX, y: e.clientY, moved: 0 };
+    });
+    addEventListener('mouseup', () => { if (drag) this.lastDragMoved = drag.moved; drag = null; });
     addEventListener('mousemove', (e) => {
-      if (!drag || !this.enabled) return;
+      if (!drag || !this.enabled || this.locked) return;
       this.look.dx += (e.clientX - drag.x) * 1.4; this.look.dy += (e.clientY - drag.y) * 1.4;
       drag.moved += Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y);
       drag.x = e.clientX; drag.y = e.clientY;
     });
     canvas.addEventListener('click', (e) => {
       if (isTouch || !this.enabled) return;
-      if (this.wantsLock && !this.locked && !this.dragLook) {
-        try { const r = canvas.requestPointerLock?.(); r?.catch?.(() => { this.dragLook = true; this.fire('lockfail'); }); } catch { this.dragLook = true; }
-      } else this.fire('click', e);
+      if (this.wantsLock && !this.locked && this.lastDragMoved < 6) { this.lock(); return; }
+      this.lastDragMoved = 0;
+      this.fire('click', e);
     });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === canvas;
@@ -47,6 +53,14 @@ export class Input {
     });
 
     if (isTouch) this.setupTouch(hudRoot);
+  }
+  // pide capturar el puntero (debe llamarse dentro de un gesto del usuario)
+  lock() {
+    if (isTouch || this.locked || !this.canvas.requestPointerLock || navigator.webdriver) return;
+    try {
+      const r = this.canvas.requestPointerLock({ unadjustedMovement: false });
+      r?.catch?.(() => { try { this.canvas.requestPointerLock(); } catch {} });
+    } catch { try { this.canvas.requestPointerLock(); } catch {} }
   }
   on(t, fn) { (this.listeners[t] ||= []).push(fn); }
   fire(t, a) { (this.listeners[t] || []).forEach((f) => f(a)); }

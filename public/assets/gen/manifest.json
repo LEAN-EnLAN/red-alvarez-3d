@@ -1,5 +1,1009 @@
 {
  "version": 1,
- "generated": "2026-11-20T03:41:31.761Z",
- "slots": {}
+ "generated": "2026-11-20T04:30:30.099Z",
+ "slots": {
+  "art_abstract_blue_1": {
+   "path": "art/art_abstract_blue_1.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 5596
+  },
+  "art_abstract_blue_2": {
+   "path": "art/art_abstract_blue_2.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 7734
+  },
+  "art_abstract_warm": {
+   "path": "art/art_abstract_warm.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 5850
+  },
+  "art_diploma": {
+   "path": "art/art_diploma.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1100,
+   "h": 1400,
+   "size": 13624
+  },
+  "art_monumento_bandera": {
+   "path": "art/art_monumento_bandera.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 45154
+  },
+  "art_numbers_print": {
+   "path": "art/art_numbers_print.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 6610
+  },
+  "art_parque_independencia": {
+   "path": "art/art_parque_independencia.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 208140
+  },
+  "art_puente_rosario_victoria": {
+   "path": "art/art_puente_rosario_victoria.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 53548
+  },
+  "art_rio_parana": {
+   "path": "art/art_rio_parana.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 105726
+  },
+  "art_team_photo": {
+   "path": "art/art_team_photo.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 99898
+  },
+  "corkboard_tech_notes": {
+   "path": "art/corkboard_tech_notes.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 36068
+  },
+  "poster_floor_plan": {
+   "path": "art/poster_floor_plan.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1400,
+   "h": 1050,
+   "size": 5080
+  },
+  "whiteboard_blank": {
+   "path": "art/whiteboard_blank.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 2400,
+   "h": 1200,
+   "size": 1916
+  },
+  "whiteboard_network_sketch": {
+   "path": "art/whiteboard_network_sketch.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 2400,
+   "h": 1200,
+   "size": 21214
+  },
+  "business_cards": {
+   "path": "branding/business_cards.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1200,
+   "h": 800,
+   "size": 9512
+  },
+  "doormat_logo": {
+   "path": "branding/doormat_logo.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1000,
+   "size": 13326
+  },
+  "logo_isotype": {
+   "path": "branding/logo_isotype.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 4388
+  },
+  "logo_wall_3d_letters": {
+   "path": "branding/logo_wall_3d_letters.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 2400,
+   "h": 800,
+   "size": 14142
+  },
+  "logo_wordmark_dark": {
+   "path": "branding/logo_wordmark_dark.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 2400,
+   "h": 700,
+   "size": 23314
+  },
+  "logo_wordmark_light": {
+   "path": "branding/logo_wordmark_light.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 2400,
+   "h": 700,
+   "size": 17090
+  },
+  "mug_logo": {
+   "path": "branding/mug_logo.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1024,
+   "h": 512,
+   "size": 5632
+  },
+  "badge_backup": {
+   "path": "missions/badge_backup.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 512,
+   "h": 512,
+   "size": 12544
+  },
+  "badge_cable-pc03": {
+   "path": "missions/badge_cable-pc03.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 512,
+   "h": 512,
+   "size": 12242
+  },
+  "badge_claro": {
+   "path": "missions/badge_claro.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 512,
+   "h": 512,
+   "size": 12242
+  },
+  "badge_corte-luz": {
+   "path": "missions/badge_corte-luz.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 512,
+   "h": 512,
+   "size": 11560
+  },
+  "badge_ping-nas": {
+   "path": "missions/badge_ping-nas.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 512,
+   "h": 512,
+   "size": 10838
+  },
+  "badge_recorrido": {
+   "path": "missions/badge_recorrido.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 512,
+   "h": 512,
+   "size": 12386
+  },
+  "badge_ticket-pc09": {
+   "path": "missions/badge_ticket-pc09.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 512,
+   "h": 512,
+   "size": 10460
+  },
+  "badge_visitas": {
+   "path": "missions/badge_visitas.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 512,
+   "h": 512,
+   "size": 13182
+  },
+  "mission_backup": {
+   "path": "missions/mission_backup.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1200,
+   "h": 675,
+   "size": 17000
+  },
+  "mission_cable-pc03": {
+   "path": "missions/mission_cable-pc03.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1200,
+   "h": 675,
+   "size": 19712
+  },
+  "mission_claro": {
+   "path": "missions/mission_claro.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1200,
+   "h": 675,
+   "size": 16786
+  },
+  "mission_corte-luz": {
+   "path": "missions/mission_corte-luz.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1200,
+   "h": 675,
+   "size": 15210
+  },
+  "mission_ping-nas": {
+   "path": "missions/mission_ping-nas.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1200,
+   "h": 675,
+   "size": 17404
+  },
+  "mission_recorrido": {
+   "path": "missions/mission_recorrido.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1200,
+   "h": 675,
+   "size": 20064
+  },
+  "mission_ticket-pc09": {
+   "path": "missions/mission_ticket-pc09.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1200,
+   "h": 675,
+   "size": 15698
+  },
+  "mission_visitas": {
+   "path": "missions/mission_visitas.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1200,
+   "h": 675,
+   "size": 17994
+  },
+  "npc_cliente_visita": {
+   "path": "npcs/npc_cliente_visita.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 23596
+  },
+  "npc_diego_escritorio3": {
+   "path": "npcs/npc_diego_escritorio3.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 25884
+  },
+  "npc_lucia_box2": {
+   "path": "npcs/npc_lucia_box2.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 28698
+  },
+  "npc_marta_recepcion": {
+   "path": "npcs/npc_marta_recepcion.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 22552
+  },
+  "npc_ricardo_gerente": {
+   "path": "npcs/npc_ricardo_gerente.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 22816
+  },
+  "npc_sofia_sueldos": {
+   "path": "npcs/npc_sofia_sueldos.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 28494
+  },
+  "npc_tecnico_jugador": {
+   "path": "npcs/npc_tecnico_jugador.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 17668
+  },
+  "decal_balance_report": {
+   "path": "props/decal_balance_report.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1240,
+   "h": 1754,
+   "size": 11558
+  },
+  "decal_binder_spines": {
+   "path": "props/decal_binder_spines.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1600,
+   "h": 1100,
+   "size": 13168
+  },
+  "decal_coffee_top": {
+   "path": "props/decal_coffee_top.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 512,
+   "h": 512,
+   "size": 8660
+  },
+  "decal_desk_calendar": {
+   "path": "props/decal_desk_calendar.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1240,
+   "h": 1240,
+   "size": 15888
+  },
+  "decal_invoice_factura_b": {
+   "path": "props/decal_invoice_factura_b.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1240,
+   "h": 1754,
+   "size": 13020
+  },
+  "decal_paper_stack": {
+   "path": "props/decal_paper_stack.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1240,
+   "h": 1754,
+   "size": 1722
+  },
+  "decal_spreadsheet_printout": {
+   "path": "props/decal_spreadsheet_printout.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1240,
+   "h": 1754,
+   "size": 12424
+  },
+  "decal_sticky_notes": {
+   "path": "props/decal_sticky_notes.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1240,
+   "h": 1240,
+   "size": 11656
+  },
+  "decal_wall_calendar": {
+   "path": "props/decal_wall_calendar.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1240,
+   "h": 1240,
+   "size": 53586
+  },
+  "screen_lockscreen": {
+   "path": "screens/screen_lockscreen.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 12860
+  },
+  "screen_pc01": {
+   "path": "screens/screen_pc01.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 34896
+  },
+  "screen_pc02": {
+   "path": "screens/screen_pc02.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 29330
+  },
+  "screen_pc03": {
+   "path": "screens/screen_pc03.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 40038
+  },
+  "screen_pc04": {
+   "path": "screens/screen_pc04.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 24292
+  },
+  "screen_pc05": {
+   "path": "screens/screen_pc05.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 26324
+  },
+  "screen_pc06": {
+   "path": "screens/screen_pc06.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 26332
+  },
+  "screen_pc07": {
+   "path": "screens/screen_pc07.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 29666
+  },
+  "screen_pc08": {
+   "path": "screens/screen_pc08.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 26890
+  },
+  "screen_pc09": {
+   "path": "screens/screen_pc09.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 31962
+  },
+  "screen_pc10": {
+   "path": "screens/screen_pc10.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 33024
+  },
+  "screen_pc11": {
+   "path": "screens/screen_pc11.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 29622
+  },
+  "screen_phone_lcd_idle": {
+   "path": "screens/screen_phone_lcd_idle.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 528,
+   "h": 192,
+   "size": 764
+  },
+  "screen_printer_panel": {
+   "path": "screens/screen_printer_panel.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 800,
+   "h": 480,
+   "size": 6904
+  },
+  "screen_tv_reunion": {
+   "path": "screens/screen_tv_reunion.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 10562
+  },
+  "screen_wallpaper_default": {
+   "path": "screens/screen_wallpaper_default.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 1920,
+   "h": 1080,
+   "size": 4202
+  },
+  "sign_acceso_restringido": {
+   "path": "signs/sign_acceso_restringido.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 10514
+  },
+  "sign_baños": {
+   "path": "signs/sign_baños.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 6296
+  },
+  "sign_matafuego": {
+   "path": "signs/sign_matafuego.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 7038
+  },
+  "sign_prohibido_fumar": {
+   "path": "signs/sign_prohibido_fumar.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 11212
+  },
+  "sign_rack_r1": {
+   "path": "signs/sign_rack_r1.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 4508
+  },
+  "sign_rack_r2": {
+   "path": "signs/sign_rack_r2.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 3940
+  },
+  "sign_riesgo_electrico": {
+   "path": "signs/sign_riesgo_electrico.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 11396
+  },
+  "sign_room_area_de_escritorios": {
+   "path": "signs/sign_room_area_de_escritorios.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 256,
+   "size": 4664
+  },
+  "sign_room_box_1": {
+   "path": "signs/sign_room_box_1.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 256,
+   "size": 2498
+  },
+  "sign_room_box_2": {
+   "path": "signs/sign_room_box_2.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 256,
+   "size": 2564
+  },
+  "sign_room_box_3": {
+   "path": "signs/sign_room_box_3.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 256,
+   "size": 2576
+  },
+  "sign_room_box_4": {
+   "path": "signs/sign_room_box_4.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 256,
+   "size": 2542
+  },
+  "sign_room_gerencia": {
+   "path": "signs/sign_room_gerencia.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 256,
+   "size": 3136
+  },
+  "sign_room_recepcion": {
+   "path": "signs/sign_room_recepcion.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 256,
+   "size": 3294
+  },
+  "sign_room_sala_de_reunion": {
+   "path": "signs/sign_room_sala_de_reunion.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 256,
+   "size": 4010
+  },
+  "sign_room_sala_tecnica": {
+   "path": "signs/sign_room_sala_tecnica.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 256,
+   "size": 3570
+  },
+  "sign_salida": {
+   "path": "signs/sign_salida.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 6272
+  },
+  "sign_ups": {
+   "path": "signs/sign_ups.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 6234
+  },
+  "sign_wifi_visitas": {
+   "path": "signs/sign_wifi_visitas.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1024,
+   "h": 1024,
+   "size": 11050
+  },
+  "ceiling_tile_60x60": {
+   "path": "textures/ceiling_tile_60x60.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 37300
+  },
+  "concrete_slab": {
+   "path": "textures/concrete_slab.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 30276
+  },
+  "cork_board": {
+   "path": "textures/cork_board.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 73700
+  },
+  "desk_laminate_oak": {
+   "path": "textures/desk_laminate_oak.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 10058
+  },
+  "desk_laminate_white": {
+   "path": "textures/desk_laminate_white.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 2518
+  },
+  "door_wood_veneer": {
+   "path": "textures/door_wood_veneer.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 2048,
+   "size": 6072
+  },
+  "fabric_chair_mesh": {
+   "path": "textures/fabric_chair_mesh.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 21482
+  },
+  "fabric_sofa_grey": {
+   "path": "textures/fabric_sofa_grey.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 109762
+  },
+  "floor_carpet_gerencia": {
+   "path": "textures/floor_carpet_gerencia.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 179354
+  },
+  "floor_oak_laminate": {
+   "path": "textures/floor_oak_laminate.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 2048,
+   "h": 2048,
+   "size": 9934
+  },
+  "floor_porcelain_60x60": {
+   "path": "textures/floor_porcelain_60x60.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 2048,
+   "h": 2048,
+   "size": 9406
+  },
+  "floor_vinyl_tech_room": {
+   "path": "textures/floor_vinyl_tech_room.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 152838
+  },
+  "leather_black": {
+   "path": "textures/leather_black.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 40000
+  },
+  "metal_brushed_aluminium": {
+   "path": "textures/metal_brushed_aluminium.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 8496
+  },
+  "metal_powdercoat_black": {
+   "path": "textures/metal_powdercoat_black.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 1566
+  },
+  "pvc_duct_white": {
+   "path": "textures/pvc_duct_white.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 512,
+   "h": 512,
+   "size": 668
+  },
+  "wall_accent_blue_fabric": {
+   "path": "textures/wall_accent_blue_fabric.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 107428
+  },
+  "wall_accent_wood_slats": {
+   "path": "textures/wall_accent_wood_slats.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 19222
+  },
+  "wall_paint_plaster": {
+   "path": "textures/wall_paint_plaster.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 2182
+  },
+  "whiteboard_surface": {
+   "path": "textures/whiteboard_surface.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 2556
+  },
+  "ui_empty_lab": {
+   "path": "ui/ui_empty_lab.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 800,
+   "h": 600,
+   "size": 4108
+  },
+  "ui_loader_keyart": {
+   "path": "ui/ui_loader_keyart.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 2560,
+   "h": 1440,
+   "size": 45870
+  },
+  "ui_mission_complete": {
+   "path": "ui/ui_mission_complete.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 1200,
+   "h": 800,
+   "size": 7916
+  },
+  "ui_offline": {
+   "path": "ui/ui_offline.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 800,
+   "h": 600,
+   "size": 4638
+  },
+  "ui_onboard_inspect": {
+   "path": "ui/ui_onboard_inspect.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 800,
+   "h": 600,
+   "size": 6260
+  },
+  "ui_onboard_keyboard": {
+   "path": "ui/ui_onboard_keyboard.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 800,
+   "h": 600,
+   "size": 6614
+  },
+  "ui_onboard_lab": {
+   "path": "ui/ui_onboard_lab.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 800,
+   "h": 600,
+   "size": 4108
+  },
+  "ui_onboard_mouse": {
+   "path": "ui/ui_onboard_mouse.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 800,
+   "h": 600,
+   "size": 6002
+  },
+  "ui_onboard_plan": {
+   "path": "ui/ui_onboard_plan.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 800,
+   "h": 600,
+   "size": 4108
+  },
+  "ui_onboard_touch": {
+   "path": "ui/ui_onboard_touch.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 800,
+   "h": 600,
+   "size": 5692
+  },
+  "ui_onboard_xray": {
+   "path": "ui/ui_onboard_xray.webp",
+   "tileable": false,
+   "transparent": true,
+   "w": 800,
+   "h": 600,
+   "size": 4882
+  },
+  "ui_paper_texture": {
+   "path": "ui/ui_paper_texture.webp",
+   "tileable": true,
+   "transparent": false,
+   "w": 1024,
+   "h": 1024,
+   "size": 2908
+  },
+  "ui_studio_backdrop": {
+   "path": "ui/ui_studio_backdrop.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 4096,
+   "h": 2048,
+   "size": 1978
+  },
+  "ui_studio_floor": {
+   "path": "ui/ui_studio_floor.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 2048,
+   "h": 2048,
+   "size": 4186
+  },
+  "window_view_escritorios": {
+   "path": "views/window_view_escritorios.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 4096,
+   "h": 1340,
+   "size": 389670
+  },
+  "window_view_gerencia": {
+   "path": "views/window_view_gerencia.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 3072,
+   "h": 1700,
+   "size": 517950
+  },
+  "window_view_panorama_dusk": {
+   "path": "views/window_view_panorama_dusk.webp",
+   "tileable": false,
+   "transparent": false,
+   "w": 4096,
+   "h": 1024,
+   "size": 258544
+  },
+  "gif_office_daycycle": {
+   "path": "gif/office_daycycle.webp"
+  }
+ }
 }

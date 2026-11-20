@@ -2,6 +2,8 @@ import { bus } from '../core/bus.js';
 import { isTouch } from '../core/input.js';
 import { ROOMS, WALLS, DOORS, META, DEVICES, DESKS, OUTLETS, RACKS, VLANS } from '../data/tp.js';
 import { infoFor } from './info.js';
+import * as G from '../world/genassets.js';
+G.loadGenManifest();
 
 // Iconos de línea propios (24×24, trazo 1.75, extremos redondeados)
 export const ICON = {
@@ -92,16 +94,19 @@ export class HUD {
   // Insignia: plegada por defecto; al entrar a una sala se despliega ~3 s con el nombre y el contexto
   setRoom(name, roomId) {
     const id = roomId || ROOMS.find((r) => r.name === name)?.id;
-    if (this.room === (id || name)) return;
+    if (!name || this.room === (id || name)) return;
     this.room = id || name;
+    const ctx = id ? roomContext(id) : '';
+    // si ya está desplegada, solo se reemplaza el texto (sin reiniciar la animación)
     this.roomEl.textContent = name;
-    this.ctxEl.textContent = id ? roomContext(id) : '';
+    this.ctxEl.textContent = ctx;
+    this.ctxEl.hidden = !ctx;
     if (this.explored) this.flashBadge();
   }
   flashBadge(ms = 3200) {
-    if (!this.roomEl.textContent) return;
-    this.badge.classList.add('open');
+    if (!this.roomEl.textContent) { this.badge.classList.remove('open'); return; }
     clearTimeout(this._bt);
+    this.badge.classList.add('open');
     this._bt = setTimeout(() => this.badge.classList.remove('open'), ms);
   }
   setPrompt(text) {
@@ -171,12 +176,15 @@ export class HUD {
 // ── onboarding: una sola vez, ~5 s ──
 export function showOnboarding(force = false) {
   try { if (!force && localStorage.getItem(ONB_KEY)) return false; localStorage.setItem(ONB_KEY, '1'); } catch {}
+  // [tecla/gesto, texto, ilustración del catálogo]
   const steps = isTouch
-    ? [['Joystick', 'Arrastrá a la izquierda para caminar'], ['Mirar', 'Arrastrá a la derecha'], ['Tocar', 'Tocá un equipo para ver su ficha'], ['Menú', 'Botón de arriba a la derecha']]
-    : [['<span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span>', 'Caminar · Shift corre'], ['<span class="kbd">Mouse</span>', 'Mirar'], ['<span class="kbd">E</span>', 'Inspeccionar lo que mirás'], ['<span class="kbd">Esc</span>', 'Menú']];
+    ? [['Joystick', 'Arrastrá a la izquierda para caminar', 'ui_onboard_touch'], ['Mirar', 'Arrastrá a la derecha', null], ['Tocar', 'Tocá un equipo para ver su ficha', 'ui_onboard_inspect'], ['Menú', 'Botón de arriba a la derecha', null]]
+    : [['<span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span>', 'Caminar · Shift corre', 'ui_onboard_keyboard'], ['<span class="kbd">Mouse</span>', 'Mirar', 'ui_onboard_mouse'], ['<span class="kbd">E</span>', 'Inspeccionar lo que mirás', 'ui_onboard_inspect'], ['<span class="kbd">Esc</span>', 'Menú', null]];
+  const pic = (id, k) => (id && G.has(id) ? `<img class="ob-img" src="${G.url(id)}" alt="" decoding="async">` : `<span class="ob-glyph">${k}</span>`);
+  const anyPic = steps.some(([, , id]) => id && G.has(id));
   const el = document.createElement('div');
-  el.className = 'onboard';
-  el.innerHTML = `<ol>${steps.map(([k, t], i) => `<li style="--i:${i}"><span class="ob-k">${k}</span><span>${t}</span></li>`).join('')}</ol><i class="ob-bar"></i>`;
+  el.className = 'onboard' + (anyPic ? ' has-img' : '');
+  el.innerHTML = `<ol>${steps.map(([k, t, id], i) => `<li style="--i:${i}">${anyPic ? `<span class="ob-vis">${pic(id, k)}</span>` : ''}<span class="ob-k">${k}</span><span>${t}</span></li>`).join('')}</ol><i class="ob-bar"></i>`;
   document.body.appendChild(el);
   const done = () => { el.classList.add('out'); setTimeout(() => el.remove(), 400); };
   el.addEventListener('click', done);
@@ -235,7 +243,9 @@ export function helpHTML() {
     ? [['Joystick izquierdo', 'Caminar'], ['Arrastrar a la derecha', 'Mirar'], ['Tocar un objeto', 'Ver su ficha'], ['Botón ≡', 'Menú']]
     : [['W A S D', 'Caminar (Shift corre)'], ['Mouse', 'Mirar · clic para capturar el puntero'], ['E', 'Inspeccionar lo que mirás'], ['Esc', 'Menú']];
   rows.push(['X', 'Rayos X: cables por cielorraso y canaletas, por VLAN'], ['M', 'Vista plano: la oficina desde arriba'], ['P', 'Presentación de las 11 páginas del TP (← →)'], ['L', 'Laboratorio: bloques, consola, topología y misiones']);
-  return `
+  const diag = isTouch ? 'ui_onboard_touch' : 'ui_onboard_keyboard';
+  const fig = G.has(diag) ? `<figure class="help-fig"><img src="${G.url(diag)}" alt="${isTouch ? 'Controles táctiles' : 'Teclas W, A, S, D, Shift y E'}" decoding="async"></figure>` : '';
+  return `${fig}
     <dl class="help-keys">${rows.map(([k, t]) => `<dt>${isTouch && k.length > 1 && !/^[A-Z]$/.test(k) ? k : k.split(' ').map((x) => `<span class="kbd">${x}</span>`).join('')}</dt><dd>${t}</dd>`).join('')}</dl>
     <div class="help-legend">${Object.entries(VLANS).filter(([k]) => k !== '70').map(([k, v]) => sw(v.color, `${k} ${v.name}`)).join('')}${sw('var(--fiber)', 'Fibra')}</div>
     <p class="help-note">El laboratorio es una simulación educativa del comportamiento previsto en el TP: no reemplaza las pruebas reales ni es GNS3. Ambientación: Poly Haven (CC0). Equipos de red modelados según datasheet. <a href="${import.meta.env.BASE_URL}TP-Redes-FINAL.pdf" target="_blank" rel="noopener">PDF del TP</a></p>`;

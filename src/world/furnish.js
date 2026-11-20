@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as D from './devices.js';
-import { META, DESKS, DEVICES, OUTLETS, MEETING, UPS, VLANS, FIBER_COLOR, TRUNK_COLOR, FIBER_ROUTE } from '../data/tp.js';
+import { META, DESKS, DEVICES, OUTLETS, MEETING, UPS, VLANS, FIBER_COLOR, TRUNK_COLOR, FIBER_ROUTE, WINDOWS } from '../data/tp.js';
 import { v3, roundPolyline, sagCurve, dedupe, tubeFrom, pointsOfTube } from './paths.js';
 import { pbrSet, textCanvas } from './textures.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -148,19 +148,46 @@ export async function furnish(scene, colliders, { manager, quality }) {
   };
 
   // caja de bocas en pared + canaleta vertical hasta el cielorraso
+  // Si la vertical caería sobre una ventana, la canaleta corre horizontal bajo el antepecho hasta el
+  // borde de la ventana y recién ahí sube (nunca cruza un vidrio).
+  const duct = (cx, cy, cz, w, h, th) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.04), poleMat);
+    m.position.set(cx, cy, cz); m.rotation.y = th;
+    m.castShadow = quality.shadows; m.receiveShadow = true;
+    root.add(m); poles.push(m);
+    return m;
+  };
   const wallPlate = (x, z, th, labels, y = 0.95) => {
     const plate = D.buildJackPlate(labels);
     plate.pickables.forEach((p) => { if (String(p.id).startsWith('plate:')) p.id = 'JACK:' + labels[0]; });
     place(plate, x, y, z, th);
-    const len = H - (y + 0.065);
-    const duct = new THREE.Mesh(new THREE.BoxGeometry(0.06, len, 0.04), poleMat);
-    const [dx, dz] = Lw(x, z, th, 0, 0.02);
-    duct.position.set(dx, y + 0.065 + len / 2, dz);
-    duct.rotation.y = th;
-    duct.castShadow = quality.shadows; duct.receiveShadow = true;
-    root.add(duct);
-    poles.push(duct);
+    const horiz = Math.abs(Math.sin(th)) < 0.5; // pared paralela a x
+    const along = horiz ? x : z;
+    const wallAt = horiz ? Math.round(z) : Math.round(x);
+    const win = WINDOWS.find((w) => (w.wall === 'z') === horiz && Math.abs(w.at - wallAt) < 0.2 && along > w.from - 0.1 && along < w.to + 0.1);
+    let riser = null;
+    if (win) {
+      // borde de ventana más cercano, del lado de afuera
+      const edge = along - win.from < win.to - along ? win.from - 0.12 : win.to + 0.12;
+      const runY = y + 0.02;
+      const [hx, hz] = Lw(x, z, th, 0, 0.02);
+      const len = Math.abs(edge - along);
+      const mid = (edge + along) / 2;
+      duct(horiz ? mid : hx, runY, horiz ? hz : mid, len + 0.06, 0.04, th);
+      riser = horiz ? v3(edge, runY, hz) : v3(hx, runY, edge);
+      duct(riser.x, runY + (H - runY) / 2, riser.z, 0.06, H - runY, th);
+    } else {
+      const len = H - (y + 0.065);
+      const [dx, dz] = Lw(x, z, th, 0, 0.02);
+      duct(dx, y + 0.065 + len / 2, dz, 0.06, len, th);
+    }
+    plate.riser = riser;
     return plate;
+  };
+  const registerPlate = (plate, labels) => {
+    for (const lb of labels) {
+      if (plate.riser) anchors.set(`jackriser:${lb}`, { pos: plate.riser.clone(), dir: v3(0, 1, 0) });
+    }
   };
 
   for (const d of DESKS) {
@@ -168,7 +195,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
     const big = d.room === 'gerencia' || d.room === 'recepcion';
     const w = big ? 1.6 : 1.4, dep = 0.7;
     const th = faceAngle(L);
-    const off = WT + dep / 2 + 0.01;
+    const off = WT + dep / 2 + 0.055; // 5 cm detrás del escritorio para la canaleta vertical
     const x = L.wall === 'z' ? L.along : L.at + L.dir * off;
     const z = L.wall === 'z' ? L.at + L.dir * off : L.along;
     const deskB = D.buildDesk(w, dep, { woodMap: woodTop.map });
@@ -200,15 +227,21 @@ export async function furnish(scene, colliders, { manager, quality }) {
     if (d.tel) {
       const oT = OUTLETS.find((o) => o.dev === d.tel);
       labels.push(oT.label);
-      p = at(-side * (w / 2 - 0.24), -0.08);
-      tel = place(D.buildPhone(oT.dev.replace('TEL', '')), p[0], top, p[1], th + 0.25);
+      // el teléfono va del lado del pasacables de la mesa (por ahí sube su cable)
+      p = at(side * (w / 2 - 0.36), -0.13);
+      tel = place(D.buildPhone(oT.dev.replace('TEL', '')), p[0], top, p[1], th - 0.2);
       usePicks(tel, d.tel);
       register(d.tel, tel.group, 'phone');
       anchors.set(`dev:${d.tel}`, worldPort(tel, 'lan'));
     }
-    // caja de bocas en la pared, detrás de la esquina de la torre
-    p = at(side * (w / 2 - 0.12), -(dep / 2 + 0.01));
-    const plate = wallPlate(p[0], p[1], th, labels);
+    // caja de bocas en la pared, debajo del escritorio, detrás de la torre (a 30 cm del piso)
+    p = at(side * (w / 2 - 0.3), -(dep / 2 + 0.055));
+    const plate = wallPlate(p[0], p[1], th, labels, 0.3);
+    registerPlate(plate, labels);
+    if (d.tel) {
+      const g = worldPort(deskB, 'grommet');
+      if (g) anchors.set(`via:${d.tel}`, g);
+    }
     usePicks(plate, 'JACK:' + labels[0]);
     register('JACK:' + labels[0], plate.group, 'jack', { labels });
     anchors.set(`jack:${oPC.label}`, worldPort(plate, 'J0'));
@@ -219,7 +252,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
       anchors.set(`jackback:${oT.label}`, worldPort(plate, 'back'));
     }
     deskBuilt.set(name, { desk, pc, mon, tel, plate, pos: [x, z], th });
-    p = at(0.42, 0.05);
+    p = at(-0.5, -0.17);
     propOn(DESKS.indexOf(d) % 2 ? 'office_notepads' : 'stationery_supplies', p[0], p[1], top, th + DESKS.indexOf(d) * 0.4);
   }
 
@@ -267,6 +300,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
     usePicks(tel, 'TEL107'); register('TEL107', tel.group, 'phone');
     anchors.set('dev:TEL107', worldPort(tel, 'lan'));
     const plate = wallPlate(12 - WT, cz + 0.42, cTh, [oT.label], 0.92);
+    registerPlate(plate, [oT.label]);
     usePicks(plate, 'JACK:' + oT.label); register('JACK:' + oT.label, plate.group, 'jack', { labels: [oT.label] });
     anchors.set(`jack:${oT.label}`, worldPort(plate, 'J0'));
     anchors.set(`jackback:${oT.label}`, worldPort(plate, 'back'));
@@ -290,6 +324,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
     anchors.set(`dev:${dev}`, worldPort(built, 'lan'));
     const o = OUTLETS.find((q) => q.dev === dev);
     const plate = wallPlate(plateAt[0], plateAt[1], plateTh, [o.label], plateY);
+    registerPlate(plate, [o.label]);
     usePicks(plate, 'JACK:' + o.label); register('JACK:' + o.label, plate.group, 'jack', { labels: [o.label] });
     anchors.set(`jack:${o.label}`, worldPort(plate, 'J0'));
     anchors.set(`jackback:${o.label}`, worldPort(plate, 'back'));
@@ -342,7 +377,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
     lab.position.set(0, 0.45, 0.0755); g.add(lab);
     const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.1, 0.03), blk); bracket.position.set(0, 0.62, -0.09); g.add(bracket);
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.28), new THREE.MeshStandardMaterial({ map: textCanvas(['MATA', 'FUEGO'], { w: 200, h: 280, bg: '#d0021b', fg: '#ffffff', size: 46, font: 800 }), roughness: 0.5 }));
-    sign.position.set(0, 1.22, -0.104); g.add(sign);
+    sign.position.set(0, 1.22, -0.104); sign.name = 'extSign'; g.add(sign);
     g.position.set(x, 0.12, z); g.rotation.y = th;
     g.traverse((o) => { if (o.isMesh) { o.castShadow = quality.shadows; o.receiveShadow = true; } });
     root.add(g);
@@ -384,14 +419,22 @@ export async function furnish(scene, colliders, { manager, quality }) {
       startCeil = [devA.pos.x, devA.pos.z];
     } else {
       const jack = anchors.get(`jack:${o.label}`), back = anchors.get(`jackback:${o.label}`);
-      const cord = sagCurve(devA.pos, devA.dir, jack.pos, jack.dir, { sag: 0.08 });
+      const via = anchors.get(`via:${o.dev}`);
+      let cord;
+      if (via) {
+        // teléfono: baja por el pasacables de la mesa y sigue por debajo del escritorio hasta la boca
+        const g = via.pos;
+        const under = v3(g.x, g.y - 0.12, g.z), floorish = v3((g.x + jack.pos.x) / 2, Math.min(jack.pos.y, g.y - 0.3), (g.z + jack.pos.z) / 2);
+        cord = new THREE.CatmullRomCurve3([devA.pos.clone(), devA.pos.clone().addScaledVector(devA.dir, 0.05), v3(g.x, g.y + 0.04, g.z), g.clone(), under, floorish, jack.pos.clone().addScaledVector(jack.dir, 0.06), jack.pos.clone()], false, 'centripetal').getPoints(40);
+      } else cord = sagCurve(devA.pos, devA.dir, jack.pos, jack.dir, { sag: 0.08 });
       visibleCord = tubeFrom(cord, 0.0028, cordMat(o.trunk ? TRUNK_COLOR : o.vlan === 40 ? '#d7dce3' : o.vlan === 60 ? '#8b5cf6' : o.vlan === 30 ? '#19b394' : '#2f7cf6'));
       visibleCord.castShadow = false;
       root.add(visibleCord);
       pts.push(...cord);
       // 2) por dentro de la canaleta hasta el cielorraso
-      pts.push(back.pos.clone(), v3(back.pos.x, PLENUM + layer, back.pos.z));
-      startCeil = [back.pos.x, back.pos.z];
+      const riser = anchors.get(`jackriser:${o.label}`)?.pos;
+      if (riser) { pts.push(back.pos.clone(), v3(back.pos.x, riser.y, back.pos.z), riser.clone(), v3(riser.x, PLENUM + layer, riser.z)); startCeil = [riser.x, riser.z]; }
+      else { pts.push(back.pos.clone(), v3(back.pos.x, PLENUM + layer, back.pos.z)); startCeil = [back.pos.x, back.pos.z]; }
     }
     // 3) por el cielorraso hasta el gabinete (ruteo ortogonal por bandejas)
     const ceil = [];
@@ -486,6 +529,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
   const deco = async (name, x, z, { rot = 0, y = 0, snap = [], collide = true, scale = 1 } = {}) => {
     const o = await prop(name, x, z, { rot, y, scale });
     if (!o) return null;
+    o.name = name;
     for (const [axis, at, dir, gap] of snap) snapToWall(o, axis, at, dir, gap ?? 0.015);
     o.updateWorldMatrix(true, true);
     const b = new THREE.Box3().setFromObject(o);
@@ -511,7 +555,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
       rb(cw - 0.03, 0.4, 0.16, 0.07, fab2, -w / 2 + 0.16 + cw * (i + 0.5), 0.67, -D / 2 + 0.24).rotation.x = -0.12;
     }
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.012, 0.15, 10), leg); l.position.set(sx * (w / 2 - 0.08), 0.075, sz * (D / 2 - 0.08)); g.add(l); }
-    g.position.set(x, 0, z); g.rotation.y = th;
+    g.position.set(x, 0, z); g.rotation.y = th; g.name = 'sofa';
     g.traverse((o) => { if (o.isMesh) { o.castShadow = quality.shadows; o.receiveShadow = true; } });
     root.add(g);
     return g;
@@ -553,7 +597,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
   jobs.push(deco('potted_plant_02', 0.4, 6.45, { snap: [['x', 0, 1], ['z', 6, 1]] }));
   jobs.push(deco('potted_plant_02', 15.6, 6.45, { snap: [['x', 16, -1], ['z', 6, 1]] }));
   jobs.push(deco('fire_alarm', 7.0, 7.9, { y: 1.35, rot: Math.PI, snap: [['z', 8, -1, 0.002]], collide: false }));
-  jobs.push(deco('wall_clock', 9.6, 6.1, { y: 2.0, snap: [['z', 6, 1, 0.002]], collide: false }));
+  jobs.push(deco('wall_clock', 14.6, 6.1, { y: 2.0, snap: [['z', 6, 1, 0.002]], collide: false }));
   // Sala técnica y reunión
   jobs.push(deco('steel_frame_shelves_03', 12.5, 11.5, { snap: [['x', 12, 1], ['z', 12, -1]] }));
   jobs.push(deco('hanging_picture_frame_01', 6.2, 10.1, { y: 1.5, rot: Math.PI / 2, snap: [['x', 6, 1, 0.002]], collide: false }));

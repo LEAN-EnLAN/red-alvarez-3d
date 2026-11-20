@@ -35,7 +35,7 @@ export function buildBuilding(scene, colliders) {
     glass: new THREE.MeshPhysicalMaterial({ color: 0xe4eef2, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.14, depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 1.4 }),
     frost: new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, roughness: 0.9, depthWrite: false, side: THREE.DoubleSide }),
     ceiling: new THREE.MeshStandardMaterial({ map: ceilingTexture(), roughness: 0.95 }),
-    panel: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff8ee, emissiveIntensity: 2.2, roughness: 0.4 }),
+    panel: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff8ee, emissiveIntensity: 1.15, roughness: 0.4 }),
     doorWood: new THREE.MeshStandardMaterial({ color: 0xc9a77f, roughness: 0.55 }),
     handle: new THREE.MeshStandardMaterial({ color: 0xbfc3c8, metalness: 0.9, roughness: 0.25 }),
   };
@@ -47,18 +47,24 @@ export function buildBuilding(scene, colliders) {
   for (const k of ['wall', 'base', 'frame', 'glass', 'frost', 'doorWood', 'handle']) cutMaterials.add(M[k]);
 
   // ── pisos por sala (UV en metros) ──
-  const floors = { tile: [], wood: [] };
+  // gerencia con alfombra y sala técnica con vinílico (texturas generadas; sin ellas, colores neutros)
+  M.carpet = new THREE.MeshStandardMaterial({ color: 0x5d6675, roughness: 1 });
+  M.vinyl = new THREE.MeshStandardMaterial({ color: 0xc9ced4, roughness: 0.7 });
+  const floorKind = (r) => (r.id === 'gerencia' ? 'carpet' : r.id === 'tecnica' ? 'vinyl' : r.floor);
+  const floors = { tile: [], wood: [], carpet: [], vinyl: [] };
   for (const r of ROOMS) {
     const w = r.x1 - r.x0, d = r.z1 - r.z0;
     const g = new THREE.PlaneGeometry(w, d);
     g.rotateX(-Math.PI / 2);
     g.translate(r.x0 + w / 2, 0, r.z0 + d / 2);
     const uv = g.attributes.uv, pos = g.attributes.position;
-    const scale = r.floor === 'tile' ? 1.2 : 2.0;
+    const kind = floorKind(r);
+    const scale = kind === 'tile' || kind === 'vinyl' ? 1.2 : 2.0;
     for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / scale, pos.getZ(i) / scale);
-    floors[r.floor].push(g);
+    floors[kind].push(g);
   }
-  for (const k of ['tile', 'wood']) {
+  for (const k of ['tile', 'wood', 'carpet', 'vinyl']) {
+    if (!floors[k].length) continue;
     const m = new THREE.Mesh(mergeGeometries(floors[k]), M[k]);
     m.receiveShadow = true;
     m.name = 'floor-' + k;
@@ -356,6 +362,7 @@ export function buildBuilding(scene, colliders) {
       g.position.set(d.at + side * (0.07 / 2 + 0.004), 1.62, s);
       g.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
     }
+    g.userData.room = room.id;
     root.add(g);
     signs.push(g);
   }

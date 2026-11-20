@@ -67,7 +67,7 @@ export class Player {
     this.stepPhase += dt * sp * (run ? 2.2 : 2.6);
     if (Math.floor(prev / Math.PI) !== Math.floor(this.stepPhase / Math.PI) && sp > 0.6) {
       const r = roomAt(this.pos.x, this.pos.z);
-      bus.emit('step', { surface: r?.floor || 'tile', run, x: this.pos.x, z: this.pos.z });
+      bus.emit('step', { surface: r?.id === 'gerencia' ? 'carpet' : r?.floor || 'tile', run, x: this.pos.x, z: this.pos.z });
     }
     this.bobAmt += ((sp > 0.3 ? Math.min(1, sp / 2.6) : 0) - this.bobAmt) * (1 - Math.exp(-dt * 8));
     // inclinación (roll) al moverse de costado y al girar

@@ -7,7 +7,8 @@ import { VLANS, FIBER_COLOR } from '../data/tp.js';
 import { createBlocks, escapeHtml } from './blocks.js';
 import { createSession, suggest, tabComplete, CONSOLE_DEVICES } from './console.js';
 import { createTopology } from './topology.js';
-import { missions, MISSIONS, mountMissionTracker } from './missions.js';
+import { missions, MISSIONS, mountMissionTracker, missionArt, missionBadge, missionNpc } from './missions.js';
+import * as G from '../world/genassets.js';
 import { createTaller } from './taller.js';
 
 export { mountMissionTracker, missions, sim };
@@ -27,6 +28,8 @@ export function initLab() {
   missions.init();
   const root = document.createElement('div');
   root.className = 'lab';
+  // ilustración para los estados vacíos (resultado sin ejecutar)
+  G.loadGenManifest().then(() => { if (G.has('ui_empty_lab')) { root.style.setProperty('--empty-lab', G.cssUrl('ui_empty_lab')); root.classList.add('has-empty-img'); } });
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-label', 'Laboratorio de red');
   root.innerHTML = `
@@ -278,7 +281,7 @@ function buildTopoView(onNode) {
       ${[20, 30, 40, 60, 50, 10].map((v) => `<span><i style="background:${VLANS[v].color}"></i>VLAN${v} ${VLANS[v].name}</span>`).join('')}
       <span><i style="background:${FIBER_COLOR}"></i>Fibra</span>
       <span><i class="dash"></i>Apagado / caído</span>
-      <span class="tiny">Tocá un equipo para abrir su consola</span>
+      <span class="tiny">Tocá un equipo para ver y configurarlo</span>
     </div>`;
   const topo = createTopology({ onNode });
   el.querySelector('.tp-stage').appendChild(topo.el);
@@ -328,7 +331,7 @@ function buildMissions(blocks, showTab) {
         ${MISSIONS.map((x, i) => {
           const s = missions.status(x.id);
           return `<button class="ms-item ${x.id === sel ? 'sel' : ''} ${s}" data-id="${x.id}">
-            <span class="ms-num">${s === 'done' ? '✓' : i + 1}</span>
+            ${missionBadge(x.id) ? `<img class="ms-bdg ${s === 'done' ? 'got' : ''}" src="${missionBadge(x.id)}" alt="${s === 'done' ? 'Insignia obtenida' : 'Insignia pendiente'}">` : `<span class="ms-num">${s === 'done' ? '✓' : i + 1}</span>`}
             <span class="ms-txt"><span class="ms-tag">${x.tag} · ${x.time}</span><span class="ms-name">${x.title}</span></span>
             ${s === 'active' ? '<span class="ms-live">en curso</span>' : ''}
           </button>`;
@@ -336,9 +339,10 @@ function buildMissions(blocks, showTab) {
         <button class="btn sm ghost ms-resetall">Reiniciar progreso</button>
       </div>
       <div class="ms-detail scroll">
-        <div class="ms-d-tag">${m.tag}</div>
+        ${missionArt(m.id) ? `<figure class="ms-art"><img src="${missionArt(m.id)}" alt="" decoding="async">${st === 'done' && missionBadge(m.id) ? `<img class="ms-art-badge" src="${missionBadge(m.id)}" alt="Insignia obtenida">` : ''}</figure>` : ''}
+        <div class="ms-d-tag">${m.tag} · ${m.time}</div>
         <h2>${m.title}</h2>
-        <p class="ms-story">${m.story}</p>
+        ${(() => { const n = missionNpc(m.id); return n ? `<div class="ms-ticket"><img src="${n.img}" alt=""><div><div class="ms-who"><b>${n.name}</b> · ${n.role}</div><p class="ms-story">${m.story}</p></div></div>` : `<p class="ms-story">${m.story}</p>`; })()}
         <ol class="ms-steps">
           ${m.steps.map((s, i) => `<li class="${steps[i] ? 'ok' : st === 'active' && i === curI ? 'cur' : ''}">
             <span class="ms-ck">${steps[i] ? '✓' : i + 1}</span>
@@ -372,5 +376,6 @@ function buildMissions(blocks, showTab) {
   bus.on('mission:update', () => { if (el.isConnected) render(); });
   bus.on('mission:done', ({ id }) => { sel = id; });
   render();
+  G.loadGenManifest().then(render);
   return { el, render, select: (id) => { sel = id; render(); } };
 }

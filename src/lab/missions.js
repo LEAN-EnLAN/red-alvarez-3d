@@ -4,6 +4,8 @@
 import { bus } from '../core/bus.js';
 import { sim } from '../sim/network.js';
 import { TEXT, OUTLETS } from '../data/tp.js';
+import * as G from '../world/genassets.js';
+G.loadGenManifest();
 
 const KEY = 'alvarez.missions.v1';
 const o3 = OUTLETS.find((o) => o.dev === 'PC03');
@@ -251,7 +253,7 @@ class MissionEngine {
       this.lastDone = id;
       this._persist();
       bus.emit('mission:done', { id });
-      bus.emit('toast', { text: `Misión cumplida: ${m.title}`, kind: 'ok' });
+      if (!G.has(`badge_${id}`)) bus.emit('toast', { text: `Misión cumplida: ${m.title}`, kind: 'ok' });
     } else this._persist();
     this._notify();
   }
@@ -267,6 +269,36 @@ class MissionEngine {
   }
 }
 export const missions = new MissionEngine();
+
+// Quién pide cada misión (retratos del catálogo de imágenes; si falta alguno, no se muestra)
+export const MISSION_NPC = {
+  recorrido: ['npc_tecnico_jugador', 'Vos', 'Técnico de soporte'],
+  'cable-pc03': ['npc_tecnico_jugador', 'Vos', 'Técnico de soporte'],
+  'ping-nas': ['npc_lucia_box2', 'Lucía', 'Contadora · Box 2'],
+  visitas: ['npc_cliente_visita', 'Cliente', 'Visita en recepción'],
+  claro: ['npc_sofia_sueldos', 'Sofía', 'Sueldos · en pleno vencimiento'],
+  'ticket-pc09': ['npc_diego_escritorio3', 'Diego', 'Escritorio 3 · PC09'],
+  'corte-luz': ['npc_marta_recepcion', 'Marta', 'Recepción'],
+  backup: ['npc_ricardo_gerente', 'Ricardo', 'Gerencia'],
+};
+export const missionArt = (id) => G.url(`mission_${id}`);
+export const missionBadge = (id) => G.url(`badge_${id}`);
+export const missionNpc = (id) => { const n = MISSION_NPC[id]; return n && G.has(n[0]) ? { img: G.url(n[0]), name: n[1], role: n[2] } : null; };
+
+// Tarjeta breve de "misión cumplida" con la insignia
+function celebrate(m) {
+  const badge = missionBadge(m.id);
+  const bg = G.url('ui_mission_complete');
+  const el = document.createElement('div');
+  el.className = 'mdone';
+  el.setAttribute('role', 'status');
+  el.innerHTML = `${bg ? `<img class="mdone-bg" src="${bg}" alt="">` : ''}${badge ? `<img class="mdone-badge" src="${badge}" alt="">` : ''}<div class="mdone-t"><span>Misión cumplida</span><b>${m.title}</b></div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('in'));
+  setTimeout(() => { el.classList.remove('in'); setTimeout(() => el.remove(), 400); }, 3600);
+}
+bus.on('mission:done', ({ id }) => { const m = MISSIONS.find((x) => x.id === id); if (m) celebrate(m); });
+
 
 // ─────────── tracker siempre visible ───────────
 export function mountMissionTracker() {
@@ -287,7 +319,7 @@ export function mountMissionTracker() {
       const nx = missions.next();
       el.innerHTML = `
         <button class="mt-head" data-act="toggle" aria-expanded="${!collapsed}">
-          <span class="mt-badge">${just ? '✓' : '◎'}</span>
+          ${just && missionBadge(just.id) ? `<img class="mt-img" src="${missionBadge(just.id)}" alt="">` : `<span class="mt-badge">${just ? '✓' : '◎'}</span>`}
           <span class="mt-title">${just ? 'Misión cumplida' : 'Misiones'}</span>
           <span class="mt-count">${doneN}/${total}</span>
           <span class="mt-chev">${collapsed ? '▾' : '▴'}</span>
@@ -305,13 +337,13 @@ export function mountMissionTracker() {
       const st = m.steps[i];
       el.innerHTML = `
         <button class="mt-head" data-act="toggle" aria-expanded="${!collapsed}">
-          <span class="mt-badge live">●</span>
+          ${missionNpc(m.id) ? `<img class="mt-img round" src="${missionNpc(m.id).img}" alt="${missionNpc(m.id).name}">` : '<span class="mt-badge live">●</span>'}
           <span class="mt-title">${m.title}</span>
           <span class="mt-count">${missions.steps.filter(Boolean).length}/${m.steps.length}</span>
           <span class="mt-chev">${collapsed ? '▾' : '▴'}</span>
         </button>
         <div class="mt-body">
-          <div class="mt-tag">${m.tag}</div>
+          <div class="mt-tag">${m.tag}${missionNpc(m.id) && m.id !== 'recorrido' && m.id !== 'cable-pc03' ? ` · pedido de ${missionNpc(m.id).name}` : ''}</div>
           <div class="mt-step"><span class="mt-n">${i + 1}</span>${st ? st.text : ''}</div>
           <div class="mt-dots">${m.steps.map((_, k) => `<i class="${missions.steps[k] ? 'on' : k === i ? 'cur' : ''}"></i>`).join('')}</div>
           <div class="mt-actions">
@@ -340,6 +372,7 @@ export function mountMissionTracker() {
   el.addEventListener('pointerdown', (e) => e.stopPropagation());
   bus.on('mission:update', render);
   render();
+  G.loadGenManifest().then(render);
   document.body.appendChild(el);
   return el;
 }

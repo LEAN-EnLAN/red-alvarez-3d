@@ -70,7 +70,7 @@ export class Interactor {
       for (const o of objs) this.box.box.union(this.tmpBox.setFromObject(o));
       this.box.box.expandByScalar(0.015);
     }
-    this.box.visible = true;
+    this.box.visible = false;
   }
   clear() { this.current = null; this.box.visible = false; }
 }
