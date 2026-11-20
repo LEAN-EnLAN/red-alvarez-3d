@@ -16,6 +16,7 @@ export const SLIDES = [
     view: 'dollhouse', cam: { pos: [-1.5, 12.5, 19], target: [5.6, 0, 6.5] },
     html: () => `${p(`<b>${META.tagline}</b> ${META.sub}`)}
       <div class="sum-grid">${SUMMARY.map(([k, v]) => `<div><span class="tiny">${k}</span><b>${v}</b></div>`).join('')}</div>
+      <div class="qr-box"><img src="${import.meta.env.BASE_URL}qr.svg" alt="QR a red-alvarez-3d.vercel.app" width="132" height="132"><div><b>Probalo en tu celular</b><span class="mono">red-alvarez-3d.vercel.app</span></div></div>
       <p class="tiny">${META.authors.join(' · ')} · Trabajo práctico final · Colegio San José · 2026</p>
       <p class="tiny">${META.assumption}</p>`,
   },
@@ -119,6 +120,7 @@ export const SLIDES = [
     view: 'dollhouse', xray: true, cam: { pos: [24, 14, -6], target: [8, 0, 6] },
     html: () => `${p('Este recorrido 3D respeta el plano, las conexiones y las direcciones del TP: cada cable termina en su boca, su panel y su puerto.')}
       ${p('Explorá la oficina con <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span>, inspeccioná con <span class="kbd">E</span> y probá la red en el laboratorio.')}
-      <div class="row-btns"><button class="btn primary" data-act="explore">Explorar la oficina</button><button class="btn" data-act="lab" data-tab="missions">Misiones</button><a class="btn" href="${import.meta.env.BASE_URL}TP-Redes-FINAL.pdf" target="_blank" rel="noopener">PDF del TP</a></div>`,
+      <div class="row-btns"><button class="btn primary" data-act="explore">Explorar la oficina</button><button class="btn" data-act="lab" data-tab="missions">Misiones</button><a class="btn" href="${import.meta.env.BASE_URL}TP-Redes-FINAL.pdf" target="_blank" rel="noopener">PDF del TP</a></div>
+      <div class="qr-box"><img src="${import.meta.env.BASE_URL}qr.svg" alt="QR a red-alvarez-3d.vercel.app" width="132" height="132"><div><b>Probalo en tu celular</b><span class="mono">red-alvarez-3d.vercel.app</span></div></div>`,
   },
 ];

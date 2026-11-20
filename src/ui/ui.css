@@ -247,3 +247,10 @@ body.presenting .toasts { bottom: calc(80px + var(--safe-b)); }
 }
 body.lab-open .onboard, body.paused .onboard, body.presenting .onboard { display: none; }
 body.info-open .minimap { display: none; }
+
+/* QR en la portada y el cierre de la presentación */
+.qr-box { display: flex; align-items: center; gap: 16px; margin: 16px 0; padding: 12px; border: 1px solid #e3e6ea; border-radius: 8px; background: #fff; }
+.qr-box img { width: 132px; height: 132px; flex: none; image-rendering: pixelated; }
+.qr-box b { display: block; font-size: 15px; color: #111; }
+.qr-box span { display: block; margin-top: 4px; font-size: 13px; color: #2563eb; }
+@media (max-width: 820px) { .qr-box img { width: 96px; height: 96px; } }
