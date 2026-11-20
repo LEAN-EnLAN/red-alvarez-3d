@@ -594,7 +594,7 @@ renderer.setAnimationLoop(() => {
   updateFly(Math.min(raw, 0.25));
   applyView();
   updateDim(dt);
-  if (world && frame % 15 === 0) cullRooms();
+  if (world) cullRooms(); // cada cuadro: después de un salto de cámara la sala nunca queda vacía
   if (orbit.enabled) orbit.update();
   // puertas: se abren al acercarse; en vistas generales quedan abiertas
   const evs = building.updateDoors(dt, mode === 'explore' || mode === 'inspect' ? player.pos : camera.position, mode === 'orbit' || mode === 'present' || mode === 'cinematic');
