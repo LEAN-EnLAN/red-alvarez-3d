@@ -499,15 +499,17 @@ label.sw input:focus-visible + span { outline: 2px solid #2f6bff; outline-offset
 .ms-ticket .ms-story { font-size: 14px; }
 .mt-img { flex: none; width: 22px; height: 22px; object-fit: contain; }
 .mt-img.round { border-radius: 50%; object-fit: cover; }
-.mdone { position: fixed; left: 50%; top: calc(72px + var(--safe-t, 0px)); transform: translate(-50%, -8px); z-index: 70; width: min(360px, calc(100vw - 32px)); height: 108px; display: flex; align-items: center; gap: 14px; padding: 0 20px; background: var(--surface, #fff); border: 1px solid var(--line, #e5e7eb); border-radius: 8px; box-shadow: 0 10px 30px rgba(16, 24, 40, .14); overflow: hidden; opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; }
-.mdone.in { opacity: 1; transform: translate(-50%, 0); }
+.mdone { position: fixed; left: 50%; top: calc(72px + var(--safe-t, 0px)); transform: translate(-50%, -8px); z-index: 70; width: min(360px, calc(100vw - 32px)); height: 108px; display: flex; align-items: center; gap: 14px; padding: 0 20px; background: var(--surface, #fff); border: 1px solid var(--line, #e5e7eb); border-radius: 8px; box-shadow: 0 10px 30px rgba(16, 24, 40, .14); overflow: hidden; transform: translate(-50%, 0); transition: opacity .3s, transform .3s; pointer-events: none; animation: mdIn .35s ease both; }
+.mdone.out { opacity: 0; transform: translate(-50%, -8px); }
+@keyframes mdIn { from { opacity: 0; transform: translate(-50%, -8px); } }
 .mdone-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .9; }
 .mdone-badge { position: relative; width: 68px; height: 68px; object-fit: contain; flex: none; }
 .mdone-t { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .mdone-t span { font-size: 12px; font-weight: 600; color: var(--ok, #157f3b); }
 .mdone-t b { font-size: 16px; line-height: 1.25; color: var(--ink, #111); }
-@media (prefers-reduced-motion: reduce) { .mdone { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .mdone { transition: none; animation: none; } }
 @media (max-width: 820px) {
+  .has-empty-img .bk-out-empty::before { width: 88px; margin: 0 0 8px; }
   .ms-art { margin-bottom: 14px; }
   .ms-ticket { padding: 10px 12px; }
 }

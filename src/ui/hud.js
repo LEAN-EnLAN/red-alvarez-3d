@@ -178,13 +178,13 @@ export function showOnboarding(force = false) {
   try { if (!force && localStorage.getItem(ONB_KEY)) return false; localStorage.setItem(ONB_KEY, '1'); } catch {}
   // [tecla/gesto, texto, ilustración del catálogo]
   const steps = isTouch
-    ? [['Joystick', 'Arrastrá a la izquierda para caminar', 'ui_onboard_touch'], ['Mirar', 'Arrastrá a la derecha', null], ['Tocar', 'Tocá un equipo para ver su ficha', 'ui_onboard_inspect'], ['Menú', 'Botón de arriba a la derecha', null]]
+    ? [['Joystick', 'Arrastrá a la izquierda para caminar', 'ui_onboard_touch'], ['Mirar', 'Arrastrá a la derecha', null, '<span class="ob-sym">⟷</span>'], ['Tocar', 'Tocá un equipo para ver su ficha', 'ui_onboard_inspect'], ['Menú', 'Botón de arriba a la derecha', null, `<span class="ob-sym">${ICON.menu}</span>`]]
     : [['<span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span>', 'Caminar · Shift corre', 'ui_onboard_keyboard'], ['<span class="kbd">Mouse</span>', 'Mirar', 'ui_onboard_mouse'], ['<span class="kbd">E</span>', 'Inspeccionar lo que mirás', 'ui_onboard_inspect'], ['<span class="kbd">Esc</span>', 'Menú', null]];
   const pic = (id, k) => (id && G.has(id) ? `<img class="ob-img" src="${G.url(id)}" alt="" decoding="async">` : `<span class="ob-glyph">${k}</span>`);
   const anyPic = steps.some(([, , id]) => id && G.has(id));
   const el = document.createElement('div');
   el.className = 'onboard' + (anyPic ? ' has-img' : '');
-  el.innerHTML = `<ol>${steps.map(([k, t, id], i) => `<li style="--i:${i}">${anyPic ? `<span class="ob-vis">${pic(id, k)}</span>` : ''}<span class="ob-k">${k}</span><span>${t}</span></li>`).join('')}</ol><i class="ob-bar"></i>`;
+  el.innerHTML = `<ol>${steps.map(([k, t, id, sym], i) => `<li style="--i:${i}">${anyPic ? `<span class="ob-vis">${pic(id, sym || k)}</span>` : ''}<span class="ob-k">${k}</span><span>${t}</span></li>`).join('')}</ol><i class="ob-bar"></i>`;
   document.body.appendChild(el);
   const done = () => { el.classList.add('out'); setTimeout(() => el.remove(), 400); };
   el.addEventListener('click', done);

@@ -9,6 +9,7 @@ async function swapImage(tex, id, { dropMaps = null } = {}) {
   if (!tex || !G.has(id)) return false;
   const im = await G.image(id);
   if (!im) return false;
+  tex.dispose(); // la textura ya estaba en la GPU con otro tamaño: se libera y se vuelve a subir
   tex.image = im;
   tex.needsUpdate = true;
   if (dropMaps) for (const [m, k] of dropMaps) { m[k] = null; m.needsUpdate = true; }

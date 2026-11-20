@@ -29,7 +29,7 @@ export function initLab() {
   const root = document.createElement('div');
   root.className = 'lab';
   // ilustración para los estados vacíos (resultado sin ejecutar)
-  G.loadGenManifest().then(() => { if (G.has('ui_empty_lab')) { root.style.setProperty('--empty-lab', G.cssUrl('ui_empty_lab')); root.classList.add('has-empty-img'); } });
+  G.loadGenManifest().then(() => { if (G.has('ui_empty_lab')) { root.style.setProperty('--empty-lab', `url("${new URL(G.url('ui_empty_lab'), document.baseURI).href}")`); root.classList.add('has-empty-img'); } });
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-label', 'Laboratorio de red');
   root.innerHTML = `

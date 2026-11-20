@@ -377,8 +377,11 @@ export async function furnish(scene, colliders, { manager, quality }) {
     lab.position.set(0, 0.45, 0.0755); g.add(lab);
     const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.1, 0.03), blk); bracket.position.set(0, 0.62, -0.09); g.add(bracket);
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.28), new THREE.MeshStandardMaterial({ map: textCanvas(['MATA', 'FUEGO'], { w: 200, h: 280, bg: '#d0021b', fg: '#ffffff', size: 46, font: 800 }), roughness: 0.5 }));
-    sign.position.set(0, 1.22, -0.104); sign.name = 'extSign'; g.add(sign);
-    g.position.set(x, 0.12, z); g.rotation.y = th;
+    sign.position.set(0, 1.75, -0.104); sign.name = 'extSign'; g.add(sign);
+    // soporte de piso (el matafuegos apoya en su base, no queda colgando)
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.03, 24), blk); stand.position.y = 0.215; g.add(stand);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.008, 6, 24), blk); ring.rotation.x = Math.PI / 2; ring.position.y = 0.36; g.add(ring);
+    g.position.set(x, -0.2, z); g.rotation.y = th;
     g.traverse((o) => { if (o.isMesh) { o.castShadow = quality.shadows; o.receiveShadow = true; } });
     root.add(g);
     return g;

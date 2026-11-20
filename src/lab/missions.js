@@ -294,8 +294,7 @@ function celebrate(m) {
   el.setAttribute('role', 'status');
   el.innerHTML = `${bg ? `<img class="mdone-bg" src="${bg}" alt="">` : ''}${badge ? `<img class="mdone-badge" src="${badge}" alt="">` : ''}<div class="mdone-t"><span>Misión cumplida</span><b>${m.title}</b></div>`;
   document.body.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('in'));
-  setTimeout(() => { el.classList.remove('in'); setTimeout(() => el.remove(), 400); }, 3600);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 3600);
 }
 bus.on('mission:done', ({ id }) => { const m = MISSIONS.find((x) => x.id === id); if (m) celebrate(m); });
 
