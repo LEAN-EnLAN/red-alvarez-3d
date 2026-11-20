@@ -1,5 +1,6 @@
 // Landing · Red Alvarez 3D. Vanilla, sin dependencias: todo el contenido sale de src/data/tp.js.
 import './landing.css';
+import { initMotion } from './motion.js';
 import { ROOMS, VLANS, OUTLETS, BUDGET, GANTT, PHONES, WAN, DEVICES, FIBER_ROUTE, META, DESKS, MEETING, TEXT, ars } from '../data/tp.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -47,10 +48,7 @@ const countUp = (el, to, fmt = (v) => Math.round(v).toLocaleString('es-AR'), dur
 $$('[data-count]').forEach((el) => once(el, () => countUp(el, +el.dataset.count)));
 
 /* ── aparición de figuras ── */
-if (!RM && IO) {
-  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
-  $$('.shots .card, .dec-f, .row3 > *, .row-budget > *').forEach((el) => { el.classList.add('rv'); io.observe(el); });
-}
+// (lo maneja motion.js)
 
 /* ── índice: marca la sección visible ── */
 if (IO) {
@@ -143,7 +141,7 @@ $('#vlans tbody').innerHTML = VL.map(([id, v]) => `<tr><td><i style="background:
 const wan = $('#wan'), cut = $('#cut-claro'), wanNote = $('#wan-note');
 const node = (cls, x, y, w, t, sub) => `<g class="nd ${cls}"><rect x="${x - w / 2}" y="${y - 18}" width="${w}" height="36"/><text x="${x}" y="${y - 2}" text-anchor="middle" font-weight="600" font-size="12.5">${t}</text><text x="${x}" y="${y + 11}" text-anchor="middle" font-size="9.5" opacity=".7">${sub}</text></g>`;
 wan.innerHTML = `<path id="w1" d="M96 36 C 130 36, 120 75, 160 75" class="wl"/><path id="w2" d="M96 114 C 130 114, 120 75, 160 75" class="wl"/><path id="w3" d="M200 75 L 240 75" class="wl live"/>
-<circle r="3.2" fill="#ff6a13" class="pk"><animateMotion dur="1.4s" repeatCount="indefinite"><mpath href="#w1"/></animateMotion></circle>
+<circle r="3.2" fill="#3e57da" class="pk"><animateMotion dur="1.4s" repeatCount="indefinite"><mpath href="#w1"/></animateMotion></circle>
 ${node('n1', 50, 36, 92, WAN[0].name, `${WAN[0].speed} · WAN1`)}${node('n2', 50, 114, 92, WAN[1].name, `${WAN[1].speed} · WAN2`)}
 ${node('dark', 180, 75, 52, 'ER605', 'dual WAN')}${node('', 280, 75, 76, 'Oficina', '7 VLANs')}`;
 const setWan = () => {
@@ -203,7 +201,7 @@ function drawRows(tab) {
   const T = TABS[tab];
   const rows = [...T.rows].sort((a, b) => b.q * b.p - a.q * a.p);
   const max = rows[0].q * rows[0].p;
-  rowsEl.innerHTML = rows.map((r) => `<tr><td>${esc(r.n)}<small>${r.s === 'Precio estimado' ? 'precio estimado' : esc(r.s)}</small></td><td>${r.q}</td><td>${ars(r.p)}</td><td>${ars(r.q * r.p)}<span class="barcell"><i data-w="${((r.q * r.p) / max * 100).toFixed(1)}"></i></span></td></tr>`).join('');
+  rowsEl.innerHTML = rows.map((r, i) => `<tr style="--i:${i}"><td>${esc(r.n)}<small>${r.s === 'Precio estimado' ? 'precio estimado' : esc(r.s)}</small></td><td>${r.q}</td><td>${ars(r.p)}</td><td>${ars(r.q * r.p)}<span class="barcell"><i data-w="${((r.q * r.p) / max * 100).toFixed(1)}"></i></span></td></tr>`).join('');
   requestAnimationFrame(() => requestAnimationFrame(() => $$('.barcell i', rowsEl).forEach((i) => { i.style.width = i.dataset.w + '%'; })));
   sumEl.textContent = `Subtotal ${ars(T.total)}`;
   listNote.textContent = T.note;
@@ -248,6 +246,9 @@ function playStep(i, auto = true) {
   const me = ++run, lines = STEPS[i][2];
   termN.textContent = `${i + 1}/${STEPS.length}`;
   term.textContent = '';
+  // barra de progreso del paso: dura lo que tarda en tipearse más la pausa
+  const est = lines.reduce((t, [txt, cls]) => t + (cls || RM ? 240 : txt.length * 24 + 300), 0) + 2800;
+  stepEls[i].style.setProperty('--dur', (auto ? est : 0) + 'ms');
   clearTimeout(timer);
   let li = 0;
   const next = () => {
@@ -312,3 +313,5 @@ const QA = [
   ['¿El laboratorio es GNS3?', 'No. Es una simulación educativa del comportamiento previsto en el TP: VLANs, ruteo entre VLANs, bloqueo de visitas, doble WAN, PoE, UPS, central telefónica y copias. GNS3 necesita un servidor con emuladores; esta versión corre entera en el navegador.'],
 ];
 $('#qa').innerHTML = QA.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('');
+
+initMotion({ RM, IO, once, countUp, FIBER_ROUTE, DEVICES, BUDGET });
