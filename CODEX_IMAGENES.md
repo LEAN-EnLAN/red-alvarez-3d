@@ -13,7 +13,7 @@ técnico: explican cómo es una cosa, no cómo está instalada en esta oficina.
 Technical pen-and-ink drawing on a plain flat background, like a plate from an engineering
 handbook or an architecture monograph. Fine black ink linework (#141413) with consistent line
 weight, light cross-hatching for shadows, isometric/axonometric projection, generous empty
-margins. Exactly one accent color: a vivid orange (#ff6a13) used sparingly on a single element.
+margins. Exactly one accent color: a cobalt blue (#3e57da) used sparingly on a single element.
 No gradients, no 3D render look, no glow, no drop shadows, no photo realism.
 Background: perfectly flat #f2f1ec (warm off-white paper), no texture, no vignette, no border.
 ```
@@ -39,7 +39,7 @@ illustration style, cute or cartoon style.
   is peeled back, revealing four twisted pairs and the plastic cross separator. The pairs fan out
   toward the jack's insulation-displacement contacts. The jack is shown slightly separated from the
   cable, floating, with thin dashed guide lines showing how they fit together. Only the outer cable
-  jacket is orange (#ff6a13); everything else is black ink linework with hatching. The twisted pairs
+  jacket is blue (#3e57da); everything else is black ink linework with hatching. The twisted pairs
   are drawn in ink only, not colored.
   [prohibido]
   ```
@@ -52,8 +52,8 @@ illustration style, cute or cartoon style.
   [estilo común]
   A loosely coiled single-mode fiber optic patch cord with a duplex LC connector at each end. Next to
   each connector, a small SFP transceiver module drawn slightly apart, as an exploded view, with thin
-  dashed guide lines showing where the LC connector plugs in. Only the thin fiber cord is orange
-  (#ff6a13); connectors and modules are black ink linework with light hatching. Calm composition,
+  dashed guide lines showing where the LC connector plugs in. Only the thin fiber cord is blue
+  (#3e57da); connectors and modules are black ink linework with light hatching. Calm composition,
   lots of empty space.
   [prohibido]
   ```
@@ -68,7 +68,7 @@ illustration style, cute or cartoon style.
   front mounting rails with evenly spaced holes, the two removable side panels, the top panel with a
   fan cutout, and the glass front door with its handle, each part pulled apart along thin dashed
   guide lines. No equipment inside, no patch panels, no switches, no cables. Only the front door
-  frame is orange (#ff6a13); all other parts are black ink linework with light hatching.
+  frame is blue (#3e57da); all other parts are black ink linework with light hatching.
   [prohibido]
   ```
 

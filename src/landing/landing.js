@@ -1,6 +1,6 @@
 // Landing · Red Alvarez 3D. Vanilla, sin dependencias: todo el contenido sale de src/data/tp.js.
 import './landing.css';
-import { ROOMS, VLANS, OUTLETS, BUDGET, GANTT, PHONES, WAN, DEVICES, FIBER_ROUTE, META, DESKS, MEETING, ars } from '../data/tp.js';
+import { ROOMS, VLANS, OUTLETS, BUDGET, GANTT, PHONES, WAN, DEVICES, FIBER_ROUTE, META, DESKS, MEETING, TEXT, ars } from '../data/tp.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -49,7 +49,7 @@ $$('[data-count]').forEach((el) => once(el, () => countUp(el, +el.dataset.count)
 /* ── aparición de figuras ── */
 if (!RM && IO) {
   const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
-  $$('.shots .plate, .dec-f, .figures, .chain').forEach((el) => { el.classList.add('rv'); io.observe(el); });
+  $$('.shots .card, .dec-f, .row3 > *, .row-budget > *').forEach((el) => { el.classList.add('rv'); io.observe(el); });
 }
 
 /* ── índice: marca la sección visible ── */
@@ -59,49 +59,47 @@ if (IO) {
   links.forEach((_, id) => { const s = document.getElementById(id); if (s) io.observe(s); });
 }
 
-/* ── 02 · la red, desarmada: el scroll mueve el video ── */
+/* ── 02 · la red, desarmada ── */
 const VL = Object.entries(VLANS);
 const pp1 = OUTLETS.filter((o) => o.pp === 'PP1').length;
 const LAYERS = [
-  { k: 'Internet', h: 'Dos proveedores, una salida.', p: `${WAN[0].name} ${WAN[0].speed} es la principal; ${WAN[1].name} ${WAN[1].speed} queda de respaldo. Ambos entran al rack R1, en la sala técnica.`, c: [[`WAN1 · ${WAN[0].name}`, '#141413'], [`WAN2 · ${WAN[1].name}`, '#7c7a73']] },
-  { k: 'ER605', h: 'Un router que separa todo.', p: 'Es la puerta .1 de cada VLAN, reparte las dos conexiones y recibe la VPN WireGuard de los cuatro externos.', c: [['7 VLANs', '#141413'], ['Dual WAN', '#141413'], ['VPN', VLANS[70].color]] },
-  { k: 'SW1 · SW2', h: 'Dos switches y 30 m de fibra.', p: 'SW1 (24 puertos PoE+) en la sala técnica y SW2 (8 puertos PoE+) en escritorios, unidos por fibra monomodo: 25 m de recorrido y 5 de reserva.', c: [['R1 · 12U', '#141413'], ['R2 · 6U', '#141413'], ['Fibra LC', '#ff6a13']] },
+  { k: 'Internet', h: 'Dos proveedores, una salida.', p: `${WAN[0].name} ${WAN[0].speed} es la principal; ${WAN[1].name} ${WAN[1].speed} queda de respaldo. Ambos entran al rack R1, en la sala técnica.`, c: [[`WAN1 · ${WAN[0].name}`, '#1a1a1a'], [`WAN2 · ${WAN[1].name}`, '#adadad']] },
+  { k: 'ER605', h: 'Un router que separa todo.', p: 'Es la puerta .1 de cada VLAN, reparte las dos conexiones y recibe la VPN WireGuard de los cuatro externos.', c: [['7 VLANs', '#1a1a1a'], ['Dual WAN', '#1a1a1a'], ['VPN', VLANS[70].color]] },
+  { k: 'SW1 · SW2', h: 'Dos switches y 30 m de fibra.', p: 'SW1 (24 puertos PoE+) en la sala técnica y SW2 (8 puertos PoE+) en escritorios, unidos por fibra monomodo: 25 m de recorrido y 5 de reserva.', c: [['R1 · 12U', '#1a1a1a'], ['R2 · 6U', '#1a1a1a'], ['Fibra LC', '#3e57da']] },
   { k: `${OUTLETS.length} bocas`, h: 'Cada cable, a su puerto.', p: `${OUTLETS.length} bocas Cat6 T568B y ${OUTLETS.reduce((s, o) => s + o.m, 0)} m de cable por canaletas y cielorraso, rotuladas del panel a la placa.`, c: [[`PP1 · ${pp1}`, VLANS[20].color], [`PP2 · ${OUTLETS.length - pp1}`, VLANS[20].color], ['Cat6', VLANS[30].color]] },
   { k: 'Puestos', h: 'Personas, teléfonos y Wi-Fi.', p: '11 PCs, 7 teléfonos IP alimentados por PoE, 2 impresoras y 2 puntos Wi-Fi 6 con redes separadas para empleados y visitas.', c: [['11 PCs', VLANS[20].color], ['7 internos', VLANS[40].color], ['Wi-Fi visitas', VLANS[50].color]] },
 ];
 const layersEl = $('#layers');
 layersEl.innerHTML = LAYERS.map((l, i) => `<li class="layer"><div class="ln"><span>${String(i + 1).padStart(2, '0')} / ${String(LAYERS.length).padStart(2, '0')}</span><span>${esc(l.k)}</span></div><h3>${esc(l.h)}</h3><p>${esc(l.p)}</p><div class="keys">${l.c.map(([t, c]) => `<span><i style="background:${c}"></i>${esc(t)}</span>`).join('')}</div></li>`).join('');
 const layerEls = $$('.layer', layersEl);
-const ex = $('#red'), bar = $('#ex-bar'), video = $('.ex-video');
-let exP = -1, vReady = false, exActive = -2, exVisible = !IO, exRaf = 0, seekWant = -1;
-// un seek por vez: mientras el video busca, se guarda el último pedido y se aplica al terminar
-const seek = (t) => { if (video.seeking) seekWant = t; else if (Math.abs(video.currentTime - t) > 0.004) video.currentTime = t; };
-video.addEventListener('seeked', () => { if (seekWant >= 0) { const t = seekWant; seekWant = -1; seek(t); } });
-// primera mitad del scroll: la oficina se parte. Segunda: con el hueco abierto, las cinco capas.
-const SPLIT = 0.42;
+const ex = $('#red'), bar = $('#ex-bar'), halfL = $('.ex-l'), halfR = $('.ex-r');
+let exP = -1, exActive = -2, exVisible = !IO, exRaf = 0;
+// primera parte del scroll: la oficina se abre al medio (dos imágenes nítidas, solo transform → GPU).
+// Con el hueco abierto, las cinco capas en el centro.
+const SPLIT = 0.36;
+const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 function exRender() {
   const r = ex.getBoundingClientRect();
   const p = clamp(-r.top / Math.max(1, r.height - innerHeight));
-  if (Math.abs(p - exP) < 0.0004) return;
+  if (Math.abs(p - exP) < 0.0003) return;
   exP = p;
   bar.style.width = (p * 100).toFixed(1) + '%';
-  const k = clamp((p - SPLIT + 0.06) / (1 - SPLIT + 0.04));
-  const active = p < SPLIT - 0.06 ? -1 : Math.min(LAYERS.length - 1, Math.floor(k * LAYERS.length));
+  const e = easeIO(clamp(p / SPLIT));
+  const wide = innerWidth > innerHeight;
+  // se alejan un poco (escala) y se separan: el hueco central queda para el texto, sin salirse de pantalla
+  const sc = 1 - (wide ? 0.14 : 0.12) * e;
+  const dx = ((wide ? 14 : 5) * e).toFixed(3); // % del ancho de la imagen
+  halfL.style.transform = `translate3d(-${dx}%, 0, 0) scale(${sc.toFixed(4)})`;
+  halfR.style.transform = `translate3d(${dx}%, 0, 0) scale(${sc.toFixed(4)})`;
+  const k = clamp((p - SPLIT + 0.04) / (1 - SPLIT + 0.02));
+  const active = p < SPLIT - 0.04 ? -1 : Math.min(LAYERS.length - 1, Math.floor(k * LAYERS.length));
   if (active !== exActive) { exActive = active; layerEls.forEach((el, i) => el.classList.toggle('on', i === active)); ex.classList.toggle('open', active >= 0); }
-  if (vReady && video.duration) seek(clamp(p / SPLIT) * (video.duration - 0.02));
 }
 const exReq = () => { if (exVisible && !exRaf) exRaf = requestAnimationFrame(() => { exRaf = 0; exRender(); }); };
 exRender();
 addEventListener('scroll', exReq, { passive: true });
 addEventListener('resize', () => { exP = -1; exReq(); }, { passive: true });
 if (IO) new IntersectionObserver((es) => { exVisible = es[0].isIntersecting; exReq(); }).observe(ex);
-// el video se pide recién cuando la sección está cerca; mientras tanto, el póster (primer cuadro)
-once(ex, () => {
-  video.addEventListener('loadeddata', () => { vReady = true; video.classList.add('ready'); exP = -1; exReq(); }, { once: true });
-  video.src = video.dataset.src;
-  video.preload = 'auto';
-  video.load();
-}, '80% 0px');
 
 /* ── 3.1 · plano ── */
 const plan = $('#plan'), planCap = $('#plan-cap');
@@ -169,9 +167,9 @@ $('#exts').innerHTML = Object.entries(PHONES.ext).map(([tel, n]) => {
 
 /* ── 04 · presupuesto ── */
 const SEGS = [
-  { k: 'Equipos', v: BUDGET.total[0][1], c: '#141413' },
-  { k: 'Materiales', v: BUDGET.total[1][1], c: '#7c7a73' },
-  { k: 'Mano de obra', v: BUDGET.total[2][1], c: '#ff6a13', labor: true },
+  { k: 'Equipos', v: BUDGET.total[0][1], c: '#ffffff' },
+  { k: 'Materiales', v: BUDGET.total[1][1], c: '#a9b5f3' },
+  { k: 'Mano de obra', v: BUDGET.total[2][1], c: '#1a1a1a', labor: true },
 ];
 const stack = $('#stack'), legend = $('#legend'), totalEl = $('#total'), laborEl = $('#labor');
 stack.innerHTML = SEGS.map((s) => `<i style="background:${s.c};flex-grow:0"></i>`).join('');
@@ -187,6 +185,7 @@ function drawBudget(animate) {
   }).join('');
   if (animate) countUp(totalEl, sum, money0, 800, shown); else totalEl.textContent = money0(sum);
   shown = sum;
+  const cap = document.getElementById('total-cap'); if (cap) cap.textContent = (withLabor ? 'con mano de obra' : 'sin mano de obra') + ' · precios del 19/11/2026';
   totalEl.title = ars(sum);
 }
 laborEl.addEventListener('change', () => drawBudget(true));
@@ -271,3 +270,45 @@ if (IO) new IntersectionObserver((es) => {
   if (v && !howOn) { howOn = true; playStep(stepI); } else if (!v) { howOn = false; clearTimeout(timer); }
 }, { rootMargin: '0px 0px -15% 0px' }).observe($('.how'));
 else playStep(0);
+
+/* ── portada: mosaico de cuadrados. Cada columna es un metro; cada tanto un cuadrado se enciende, como un paquete. ── */
+const mosaic = $('#mosaic');
+if (mosaic) {
+  const cols = Math.ceil(innerWidth / 36) + 1, rows = 10, n = cols * rows;
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const cells = [];
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement('i');
+    const row = Math.floor(i / cols), col = i % cols;
+    const center = Math.abs(col - cols / 2) / (cols / 2); // 0 en el centro
+    const pr = (1 - row / rows) * (0.25 + 0.75 * center) * 0.55;
+    const v = rnd();
+    if (v < pr * 0.25) el.className = 'a3'; else if (v < pr * 0.6) el.className = 'a2'; else if (v < pr) el.className = 'a1';
+    cells.push(el); frag.append(el);
+  }
+  mosaic.append(frag);
+  if (!RM) {
+    const lit = [];
+    setInterval(() => {
+      if (document.hidden || scrollY > 600) return;
+      const el = cells[Math.floor(Math.random() * cells.length)];
+      if (el.className) return;
+      el.className = Math.random() < 0.3 ? 'a3' : 'a2';
+      lit.push(el);
+      if (lit.length > 6) lit.shift().className = '';
+    }, 700);
+  }
+}
+
+/* ── preguntas: todas las respuestas salen del TP ── */
+const QA = [
+  ['¿La oficina existe?', META.assumption],
+  ['¿Qué hay que confirmar antes de contratar?', TEXT.antesDeContratar],
+  ['¿Cómo entran los cuatro contadores externos?', TEXT.vpn],
+  ['¿Cómo se verifica que el cableado está bien?', TEXT.certificar],
+  ['¿Qué pruebas se harían al instalar?', TEXT.pruebas],
+  ['¿El laboratorio es GNS3?', 'No. Es una simulación educativa del comportamiento previsto en el TP: VLANs, ruteo entre VLANs, bloqueo de visitas, doble WAN, PoE, UPS, central telefónica y copias. GNS3 necesita un servidor con emuladores; esta versión corre entera en el navegador.'],
+];
+$('#qa').innerHTML = QA.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('');
