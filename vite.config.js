@@ -33,9 +33,15 @@ export default defineConfig({
       },
       workbox: {
         // todo queda offline después de la primera visita (ideal para el proyector sin wifi)
-        globPatterns: ['**/*.{js,css,html,woff2,png,jpg,webp,glb,json,svg}'],
+        // el HTML no se precachea: siempre se pide a la red (si no hay red, sale de la caché) y así
+        // nadie queda viendo una versión vieja de la landing o de la demo
+        globPatterns: ['**/*.{js,css,woff2,png,jpg,webp,glb,json,svg}'],
+        navigateFallback: null,
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
-        runtimeCaching: [{ urlPattern: /\.pdf$/, handler: 'CacheFirst', options: { cacheName: 'pdf' } }],
+        runtimeCaching: [
+          { urlPattern: ({ request }) => request.mode === 'navigate', handler: 'NetworkFirst', options: { cacheName: 'pages', networkTimeoutSeconds: 4 } },
+          { urlPattern: /\.pdf$/, handler: 'CacheFirst', options: { cacheName: 'pdf' } },
+        ],
       },
     }),
   ],
