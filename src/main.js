@@ -660,7 +660,7 @@ addEventListener('resize', () => {
   aoPass?.setSize?.(innerWidth, innerHeight);
 });
 // debug/automatización
-window.__app = { wallColliders, camera, player, flyTo, presenter, setXray, enterOrbit, enterExplore, bus, get world() { return world; }, get mode() { return mode; }, renderer, scene, info, building, useTarget, setView };
+window.__app = { wallColliders, camera, player, flyTo, presenter, setXray, enterOrbit, enterExplore, bus, get world() { return world; }, get mode() { return mode; }, renderer, scene, info, building, useTarget, setView, get composer() { return composer; } };
 
 // PWA: offline después de la primera visita a la demo (la landing no registra nada)
 if (__PWA__ && import.meta.env.PROD && 'serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js', { scope: import.meta.env.BASE_URL }).catch(() => {}));

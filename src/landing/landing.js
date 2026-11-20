@@ -73,22 +73,22 @@ const layersEl = $('#layers');
 layersEl.innerHTML = LAYERS.map((l, i) => `<li class="layer"><div class="ln"><span>${String(i + 1).padStart(2, '0')} / ${String(LAYERS.length).padStart(2, '0')}</span><span>${esc(l.k)}</span></div><h3>${esc(l.h)}</h3><p>${esc(l.p)}</p><div class="keys">${l.c.map(([t, c]) => `<span><i style="background:${c}"></i>${esc(t)}</span>`).join('')}</div></li>`).join('');
 const layerEls = $$('.layer', layersEl);
 const ex = $('#red'), bar = $('#ex-bar'), video = $('.ex-video');
-let exP = -1, vReady = false, exActive = -2, exVisible = !IO, exRaf = 0, seekBusy = false, seekWant = -1;
-function seek(t) {
-  // un seek por vez: los navegadores ignoran o encolan mal los seeks superpuestos
-  if (seekBusy) { seekWant = t; return; }
-  seekBusy = true; video.currentTime = t;
-}
-video.addEventListener('seeked', () => { seekBusy = false; if (seekWant >= 0) { const t = seekWant; seekWant = -1; if (Math.abs(t - video.currentTime) > 0.008) seek(t); } });
+let exP = -1, vReady = false, exActive = -2, exVisible = !IO, exRaf = 0, seekWant = -1;
+// un seek por vez: mientras el video busca, se guarda el último pedido y se aplica al terminar
+const seek = (t) => { if (video.seeking) seekWant = t; else if (Math.abs(video.currentTime - t) > 0.004) video.currentTime = t; };
+video.addEventListener('seeked', () => { if (seekWant >= 0) { const t = seekWant; seekWant = -1; seek(t); } });
+// primera mitad del scroll: la oficina se parte. Segunda: con el hueco abierto, las cinco capas.
+const SPLIT = 0.42;
 function exRender() {
   const r = ex.getBoundingClientRect();
   const p = clamp(-r.top / Math.max(1, r.height - innerHeight));
   if (Math.abs(p - exP) < 0.0004) return;
   exP = p;
   bar.style.width = (p * 100).toFixed(1) + '%';
-  const active = Math.min(LAYERS.length - 1, Math.floor(clamp((p - 0.04) / 0.92) * LAYERS.length));
-  if (active !== exActive) { exActive = active; layerEls.forEach((el, i) => el.classList.toggle('on', i === active)); }
-  if (vReady && video.duration) seek(clamp(p / 0.86) * (video.duration - 0.02));
+  const k = clamp((p - SPLIT + 0.06) / (1 - SPLIT + 0.04));
+  const active = p < SPLIT - 0.06 ? -1 : Math.min(LAYERS.length - 1, Math.floor(k * LAYERS.length));
+  if (active !== exActive) { exActive = active; layerEls.forEach((el, i) => el.classList.toggle('on', i === active)); ex.classList.toggle('open', active >= 0); }
+  if (vReady && video.duration) seek(clamp(p / SPLIT) * (video.duration - 0.02));
 }
 const exReq = () => { if (exVisible && !exRaf) exRaf = requestAnimationFrame(() => { exRaf = 0; exRender(); }); };
 exRender();
