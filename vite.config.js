@@ -25,7 +25,7 @@ export default defineConfig({
       },
       workbox: {
         // todo queda offline después de la primera visita (ideal para el proyector sin wifi)
-        globPatterns: ['**/*.{js,css,html,woff2,png,jpg,glb,json,svg}'],
+        globPatterns: ['**/*.{js,css,html,woff2,png,jpg,webp,glb,json,svg}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         runtimeCaching: [{ urlPattern: /\.pdf$/, handler: 'CacheFirst', options: { cacheName: 'pdf' } }],
       },
