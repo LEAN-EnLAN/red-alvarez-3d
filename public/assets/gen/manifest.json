@@ -98,14 +98,6 @@
    "h": 1050,
    "size": 5080
   },
-  "whiteboard_blank": {
-   "path": "art/whiteboard_blank.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 2400,
-   "h": 1200,
-   "size": 1916
-  },
   "whiteboard_network_sketch": {
    "path": "art/whiteboard_network_sketch.webp",
    "tileable": false,
@@ -114,38 +106,6 @@
    "h": 1200,
    "size": 21214
   },
-  "business_cards": {
-   "path": "branding/business_cards.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 1200,
-   "h": 800,
-   "size": 9512
-  },
-  "doormat_logo": {
-   "path": "branding/doormat_logo.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 1600,
-   "h": 1000,
-   "size": 13326
-  },
-  "logo_isotype": {
-   "path": "branding/logo_isotype.webp",
-   "tileable": false,
-   "transparent": true,
-   "w": 1024,
-   "h": 1024,
-   "size": 4388
-  },
-  "logo_wall_3d_letters": {
-   "path": "branding/logo_wall_3d_letters.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 2400,
-   "h": 800,
-   "size": 14142
-  },
   "logo_wordmark_dark": {
    "path": "branding/logo_wordmark_dark.webp",
    "tileable": false,
@@ -153,22 +113,6 @@
    "w": 2400,
    "h": 700,
    "size": 23314
-  },
-  "logo_wordmark_light": {
-   "path": "branding/logo_wordmark_light.webp",
-   "tileable": false,
-   "transparent": true,
-   "w": 2400,
-   "h": 700,
-   "size": 17090
-  },
-  "mug_logo": {
-   "path": "branding/mug_logo.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 1024,
-   "h": 512,
-   "size": 5632
   },
   "badge_backup": {
    "path": "missions/badge_backup.webp",
@@ -362,22 +306,6 @@
    "h": 1754,
    "size": 11558
   },
-  "decal_binder_spines": {
-   "path": "props/decal_binder_spines.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 1600,
-   "h": 1100,
-   "size": 13168
-  },
-  "decal_coffee_top": {
-   "path": "props/decal_coffee_top.webp",
-   "tileable": false,
-   "transparent": true,
-   "w": 512,
-   "h": 512,
-   "size": 8660
-  },
   "decal_desk_calendar": {
    "path": "props/decal_desk_calendar.webp",
    "tileable": false,
@@ -425,14 +353,6 @@
    "w": 1240,
    "h": 1240,
    "size": 53586
-  },
-  "screen_lockscreen": {
-   "path": "screens/screen_lockscreen.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 1920,
-   "h": 1080,
-   "size": 12860
   },
   "screen_pc01": {
    "path": "screens/screen_pc01.webp",
@@ -522,22 +442,6 @@
    "h": 1080,
    "size": 29622
   },
-  "screen_phone_lcd_idle": {
-   "path": "screens/screen_phone_lcd_idle.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 528,
-   "h": 192,
-   "size": 764
-  },
-  "screen_printer_panel": {
-   "path": "screens/screen_printer_panel.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 800,
-   "h": 480,
-   "size": 6904
-  },
   "screen_tv_reunion": {
    "path": "screens/screen_tv_reunion.webp",
    "tileable": false,
@@ -546,14 +450,6 @@
    "h": 1080,
    "size": 10562
   },
-  "screen_wallpaper_default": {
-   "path": "screens/screen_wallpaper_default.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 1920,
-   "h": 1080,
-   "size": 4202
-  },
   "sign_acceso_restringido": {
    "path": "signs/sign_acceso_restringido.webp",
    "tileable": false,
@@ -561,14 +457,6 @@
    "w": 1024,
    "h": 1024,
    "size": 10514
-  },
-  "sign_baños": {
-   "path": "signs/sign_baños.webp",
-   "tileable": false,
-   "transparent": true,
-   "w": 1024,
-   "h": 1024,
-   "size": 6296
   },
   "sign_matafuego": {
    "path": "signs/sign_matafuego.webp",
@@ -585,22 +473,6 @@
    "w": 1024,
    "h": 1024,
    "size": 11212
-  },
-  "sign_rack_r1": {
-   "path": "signs/sign_rack_r1.webp",
-   "tileable": false,
-   "transparent": true,
-   "w": 1024,
-   "h": 1024,
-   "size": 4508
-  },
-  "sign_rack_r2": {
-   "path": "signs/sign_rack_r2.webp",
-   "tileable": false,
-   "transparent": true,
-   "w": 1024,
-   "h": 1024,
-   "size": 3940
   },
   "sign_riesgo_electrico": {
    "path": "signs/sign_riesgo_electrico.webp",
@@ -690,14 +562,6 @@
    "h": 1024,
    "size": 6272
   },
-  "sign_ups": {
-   "path": "signs/sign_ups.webp",
-   "tileable": false,
-   "transparent": true,
-   "w": 1024,
-   "h": 1024,
-   "size": 6234
-  },
   "sign_wifi_visitas": {
    "path": "signs/sign_wifi_visitas.webp",
    "tileable": false,
@@ -722,14 +586,6 @@
    "h": 1024,
    "size": 30276
   },
-  "cork_board": {
-   "path": "textures/cork_board.webp",
-   "tileable": true,
-   "transparent": false,
-   "w": 512,
-   "h": 512,
-   "size": 73700
-  },
   "desk_laminate_oak": {
    "path": "textures/desk_laminate_oak.webp",
    "tileable": true,
@@ -738,14 +594,6 @@
    "h": 1024,
    "size": 10058
   },
-  "desk_laminate_white": {
-   "path": "textures/desk_laminate_white.webp",
-   "tileable": true,
-   "transparent": false,
-   "w": 1024,
-   "h": 1024,
-   "size": 2518
-  },
   "door_wood_veneer": {
    "path": "textures/door_wood_veneer.webp",
    "tileable": true,
@@ -753,14 +601,6 @@
    "w": 1024,
    "h": 2048,
    "size": 6072
-  },
-  "fabric_chair_mesh": {
-   "path": "textures/fabric_chair_mesh.webp",
-   "tileable": true,
-   "transparent": false,
-   "w": 512,
-   "h": 512,
-   "size": 21482
   },
   "fabric_sofa_grey": {
    "path": "textures/fabric_sofa_grey.webp",
@@ -802,30 +642,6 @@
    "h": 1024,
    "size": 152838
   },
-  "leather_black": {
-   "path": "textures/leather_black.webp",
-   "tileable": true,
-   "transparent": false,
-   "w": 1024,
-   "h": 1024,
-   "size": 40000
-  },
-  "metal_brushed_aluminium": {
-   "path": "textures/metal_brushed_aluminium.webp",
-   "tileable": true,
-   "transparent": false,
-   "w": 1024,
-   "h": 1024,
-   "size": 8496
-  },
-  "metal_powdercoat_black": {
-   "path": "textures/metal_powdercoat_black.webp",
-   "tileable": true,
-   "transparent": false,
-   "w": 512,
-   "h": 512,
-   "size": 1566
-  },
   "pvc_duct_white": {
    "path": "textures/pvc_duct_white.webp",
    "tileable": true,
@@ -833,14 +649,6 @@
    "w": 512,
    "h": 512,
    "size": 668
-  },
-  "wall_accent_blue_fabric": {
-   "path": "textures/wall_accent_blue_fabric.webp",
-   "tileable": true,
-   "transparent": false,
-   "w": 1024,
-   "h": 1024,
-   "size": 107428
   },
   "wall_accent_wood_slats": {
    "path": "textures/wall_accent_wood_slats.webp",
@@ -857,14 +665,6 @@
    "w": 1024,
    "h": 1024,
    "size": 2182
-  },
-  "whiteboard_surface": {
-   "path": "textures/whiteboard_surface.webp",
-   "tileable": true,
-   "transparent": false,
-   "w": 1024,
-   "h": 1024,
-   "size": 2556
   },
   "ui_empty_lab": {
    "path": "ui/ui_empty_lab.webp",
@@ -914,14 +714,6 @@
    "h": 600,
    "size": 6614
   },
-  "ui_onboard_lab": {
-   "path": "ui/ui_onboard_lab.webp",
-   "tileable": false,
-   "transparent": true,
-   "w": 800,
-   "h": 600,
-   "size": 4108
-  },
   "ui_onboard_mouse": {
    "path": "ui/ui_onboard_mouse.webp",
    "tileable": false,
@@ -930,14 +722,6 @@
    "h": 600,
    "size": 6002
   },
-  "ui_onboard_plan": {
-   "path": "ui/ui_onboard_plan.webp",
-   "tileable": false,
-   "transparent": true,
-   "w": 800,
-   "h": 600,
-   "size": 4108
-  },
   "ui_onboard_touch": {
    "path": "ui/ui_onboard_touch.webp",
    "tileable": false,
@@ -945,30 +729,6 @@
    "w": 800,
    "h": 600,
    "size": 5692
-  },
-  "ui_onboard_xray": {
-   "path": "ui/ui_onboard_xray.webp",
-   "tileable": false,
-   "transparent": true,
-   "w": 800,
-   "h": 600,
-   "size": 4882
-  },
-  "ui_paper_texture": {
-   "path": "ui/ui_paper_texture.webp",
-   "tileable": true,
-   "transparent": false,
-   "w": 1024,
-   "h": 1024,
-   "size": 2908
-  },
-  "ui_studio_backdrop": {
-   "path": "ui/ui_studio_backdrop.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 4096,
-   "h": 2048,
-   "size": 1978
   },
   "ui_studio_floor": {
    "path": "ui/ui_studio_floor.webp",
@@ -993,14 +753,6 @@
    "w": 3072,
    "h": 1700,
    "size": 517950
-  },
-  "window_view_panorama_dusk": {
-   "path": "views/window_view_panorama_dusk.webp",
-   "tileable": false,
-   "transparent": false,
-   "w": 4096,
-   "h": 1024,
-   "size": 258544
   },
   "gif_office_daycycle": {
    "path": "gif/office_daycycle.webp"

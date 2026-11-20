@@ -20,6 +20,7 @@ import { Packets } from './world/packets.js';
 import { setMaxAniso } from './world/textures.js';
 import { tubeFrom } from './world/paths.js';
 import { applyGenAssets } from './world/genwire.js';
+import { batchStatic } from './world/batch.js';
 import { HUD, InfoPanel, showHelp } from './ui/hud.js';
 import { Presenter } from './ui/present.js';
 import { PauseMenu } from './ui/pause.js';
@@ -368,25 +369,30 @@ function updateDim(dt) {
 
 // ───────── salas cerradas: su contenido solo se dibuja si estás adentro o la puerta está abierta ─────────
 const CLOSED_ROOMS = ['gerencia', 'escritorios', 'recepcion', 'reunion', 'tecnica'];
-let roomOf = null;
 function cullRooms() {
+  if (!world.cullables) return;
   const exploring = mode === 'explore' || mode === 'inspect';
-  if (!roomOf) {
-    if (!exploring) return;
-    roomOf = new Map();
-    const b = new THREE.Box3(), c = new THREE.Vector3();
-    for (const o of world.root.children) {
-      if (o === world.xray) continue;
-      b.setFromObject(o); if (b.isEmpty()) continue;
-      b.getCenter(c);
-      const r = roomAt(c.x, c.z);
-      if (r && CLOSED_ROOMS.includes(r.id)) roomOf.set(o, r.id);
-    }
-  }
   const here = roomAt(player.pos.x, player.pos.z)?.id;
   const open = new Set();
-  for (const dr of building.doors) if (dr.t > 0.04) { const rid = dr.id.replace('d-', '').replace('entrada', 'recepcion'); open.add(rid); }
-  for (const [o, rid] of roomOf) o.visible = !exploring || rid === here || open.has(rid);
+  for (const dr of building.doors) if (dr.t > 0.04) open.add(dr.id.replace('d-', '').replace('entrada', 'recepcion'));
+  for (const c of world.cullables) c.obj.visible = !exploring || !CLOSED_ROOMS.includes(c.room) || c.room === here || open.has(c.room);
+}
+
+// ───────── resolución dinámica: si caen los FPS baja la resolución, si sobra margen la recupera ─────────
+let perfAcc = 0, perfN = 0, dprScale = 1;
+function applyDpr() {
+  const r = Q.dpr * dprScale;
+  renderer.setPixelRatio(r);
+  composer?.setPixelRatio(r);
+  composer?.setSize(innerWidth, innerHeight);
+}
+function adaptResolution(raw) {
+  if (document.hidden || raw > 0.5) return;
+  perfAcc += raw; perfN++;
+  if (perfN < 60) return;
+  const avg = perfAcc / perfN; perfAcc = perfN = 0;
+  if (avg > 1 / 45 && dprScale > 0.55) { dprScale = Math.max(0.55, dprScale - 0.1); applyDpr(); }
+  else if (avg < 1 / 58 && dprScale < 1) { dprScale = Math.min(1, dprScale + 0.05); applyDpr(); }
 }
 
 // ───────── recorrido del cable: cinemática (alejar → dibujar → volver) ─────────
@@ -570,6 +576,14 @@ function captureInteriorEnv() {
   try { const n = await applyGenAssets({ building, world, scene }); if (n) console.info(`Assets generados aplicados: ${n}`); } catch (e) { console.warn('genassets', e); }
   setView('interior');
   captureInteriorEnv();
+  // geometría estática unida por material y sala (draw calls: miles → cientos)
+  {
+    const doorPivots = new Set(building.doors.map((d) => d.pivot));
+    const extras = building.root.children.filter((o) => o.isGroup && !doorPivots.has(o) && o !== building.city);
+    const b = batchStatic([world.root, ...extras], { exclude: [world.xray], scene, protectedMaterials: new Set(world.leds.map((l) => l.mat)) });
+    world.cullables = b.cullables;
+    window.__app.batched = b.saved;
+  }
   renderer.compile(scene, camera);
   const problems = world.audit(wallColliders);
   if (problems.length) console.warn('Superposiciones detectadas:', problems);
@@ -629,6 +643,7 @@ renderer.setAnimationLoop(() => {
   if (world && frame % 6 === 0) blinkLeds();
   if (planLabels.length) updatePlanLabels();
   if (frame % 10 === 0) hud.setLocked(input.locked || info.isOpen || labOpen, mode === 'explore');
+  adaptResolution(raw);
   bus.emit('frame', { camera, dt });
   if (composer) composer.render(dt); else renderer.render(scene, camera);
 });
@@ -646,3 +661,6 @@ addEventListener('resize', () => {
 });
 // debug/automatización
 window.__app = { wallColliders, camera, player, flyTo, presenter, setXray, enterOrbit, enterExplore, bus, get world() { return world; }, get mode() { return mode; }, renderer, scene, info, building, useTarget, setView };
+
+// PWA: offline después de la primera visita a la demo (la landing no registra nada)
+if (__PWA__ && import.meta.env.PROD && 'serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js', { scope: import.meta.env.BASE_URL }).catch(() => {}));

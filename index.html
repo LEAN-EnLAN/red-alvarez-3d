@@ -2,10 +2,209 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Red Alvarez 3D</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Red Alvarez 3D · Diseño de red para un estudio contable</title>
+    <meta name="description" content="TP final de Redes 2026: la red de datos de un estudio contable de 16 × 12 m, con su presupuesto y un recorrido 3D donde cada cable va a su boca, su panel y su puerto." />
+    <meta name="theme-color" content="#f2f1ec" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Red Alvarez 3D · Diseño de red para un estudio contable" />
+    <meta property="og:description" content="23 bocas Cat6, 2 racks, fibra entre gabinetes, 7 VLANs y doble internet. El TP final de Redes 2026, recorrible en 3D desde el navegador." />
+    <meta property="og:image" content="/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Red Alvarez 3D" />
+    <meta name="twitter:description" content="El TP final de Redes 2026, recorrible en 3D desde el navegador." />
+    <meta name="twitter:image" content="/og.jpg" />
+    <script>document.documentElement.className = "js"</script>
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="preload" as="image" href="/landing/hero.webp" fetchpriority="high" />
   </head>
   <body>
-    <p><a href="/demo/">Abrir demo</a></p>
+    <a class="skip" href="#main">Saltar al contenido</a>
+
+    <header class="bar">
+      <a class="mark" href="#top">Alvarez &amp; Asoc. <span>— red de datos</span></a>
+      <nav aria-label="Secciones">
+        <a href="#encargo"><i>01</i>Encargo</a>
+        <a href="#red"><i>02</i>La red</a>
+        <a href="#decisiones"><i>03</i>Decisiones</a>
+        <a href="#presupuesto"><i>04</i>Presupuesto</a>
+        <a href="#demo"><i>05</i>La demo</a>
+      </nav>
+      <a class="bar-demo" href="/demo/">Recorrido 3D ↗</a>
+    </header>
+
+    <main id="main">
+      <!-- portada -->
+      <section class="cover" id="top">
+        <p class="kicker">Trabajo práctico final · Redes · 2026</p>
+        <h1 class="title" data-type>Red de datos para un estudio contable de 16 × 12 m.</h1>
+        <dl class="titleblock">
+          <div><dt>Cliente</dt><dd>Alvarez &amp; Asoc. <small>estudio ficticio, Rosario</small></dd></div>
+          <div><dt>Alcance</dt><dd>11 puestos · 7 internos · 2 impresoras</dd></div>
+          <div><dt>Autores</dt><dd>Tomás Volonté<br />Juan Manuel Goiburú<br />Leandro Palombo</dd></div>
+          <div><dt>Escuela</dt><dd>Colegio San José</dd></div>
+          <div><dt>Estado</dt><dd>Propuesta teórica <small>pruebas previstas, no realizadas</small></dd></div>
+        </dl>
+        <figure class="plate hero-fig">
+          <img src="/landing/hero.webp" alt="La oficina vista desde arriba en el recorrido 3D, con los cables de red marcados por color" width="1600" height="900" fetchpriority="high" decoding="async" />
+          <figcaption><span>Fig. 1</span> La oficina en el recorrido 3D, con las paredes cortadas a 1,3 m. Los trazos de color son los cables reales del TP. <a href="/demo/">Abrir el recorrido ↗</a></figcaption>
+        </figure>
+      </section>
+
+      <!-- 01 encargo -->
+      <section class="sec" id="encargo">
+        <header class="sec-h"><span class="num">01</span><h2>El encargo</h2></header>
+        <div class="brief">
+          <p class="lede">Un estudio contable de once personas necesita <b>dos conexiones a internet</b>, archivos protegidos y telefonía propia, en una planta de 192 m² y <b>sin comprar tecnología de más</b>.</p>
+          <ul class="figures">
+            <li><b data-count="23">23</b><span>bocas Cat6 rotuladas, de la placa de pared al puerto del switch</span></li>
+            <li><b data-count="472">472</b><span>metros de cable, medidos boca por boca</span></li>
+            <li><b data-count="7">7</b><span>redes separadas en los mismos switches</span></li>
+            <li><b data-count="30">30</b><span>metros de fibra entre los dos gabinetes</span></li>
+            <li><b data-count="2">2</b><span>proveedores de internet, uno de respaldo</span></li>
+            <li><b data-count="3">3</b><span>lugares para cada copia de los archivos</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 02 la red, desarmada -->
+      <section class="explode" id="red" aria-label="La red, desarmada">
+        <div class="ex-sticky">
+          <div class="ex-media">
+            <video class="ex-video" muted playsinline preload="none" data-src="/landing/explode.mp4" aria-hidden="true"></video>
+            <img class="ex-poster" src="/landing/explode-poster.webp" alt="" width="1280" height="720" loading="lazy" decoding="async" />
+          </div>
+          <div class="ex-col">
+            <header class="sec-h"><span class="num">02</span><h2>La red, desarmada</h2></header>
+            <ol class="layers" id="layers"></ol>
+            <div class="ex-rule" aria-hidden="true"><i id="ex-bar"></i></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 03 decisiones -->
+      <section class="sec" id="decisiones">
+        <header class="sec-h"><span class="num">03</span><h2>Decisiones</h2></header>
+
+        <article class="dec">
+          <div class="dec-t"><span>3.1</span><h3>Dos gabinetes, una boca por puesto</h3><p>R1 en la sala técnica atiende recepción, boxes, gerencia y reunión. R2, junto a los escritorios, evita cinco tiradas largas: los une un solo tramo de fibra.</p></div>
+          <figure class="dec-f">
+            <svg id="plan" viewBox="-2 -2 164 124" role="img" aria-label="Plano de la oficina con sus ambientes, bocas y gabinetes"></svg>
+            <figcaption id="plan-cap">Pasá por una sala para ver sus bocas.</figcaption>
+          </figure>
+        </article>
+
+        <article class="dec">
+          <div class="dec-t"><span>3.2</span><h3>Siete redes en los mismos switches</h3><p>Las visitas no ven los archivos, los teléfonos no compiten con las PCs y el router es la puerta <code>.1</code> de cada red.</p></div>
+          <figure class="dec-f">
+            <table class="vt" id="vlans"><thead><tr><th>VLAN</th><th>Uso</th><th>Red</th><th>Equipos</th></tr></thead><tbody></tbody></table>
+          </figure>
+        </article>
+
+        <article class="dec">
+          <div class="dec-t"><span>3.3</span><h3>Si se corta Claro, nadie lo nota</h3><p>El ER605 usa Claro como principal y pasa solo a Personal. Probalo: cortá la línea.</p></div>
+          <figure class="dec-f">
+            <svg id="wan" viewBox="0 0 320 150" aria-hidden="true"></svg>
+            <figcaption><label class="tog"><input type="checkbox" id="cut-claro" /><span></span>Cortar Claro</label><em id="wan-note"></em></figcaption>
+          </figure>
+        </article>
+
+        <article class="dec">
+          <div class="dec-t"><span>3.4</span><h3>Un espejo no es una copia</h3><p>NAS1 guarda los archivos en dos discos. Cada noche se copian a NAS2, en gerencia, y a la nube.</p></div>
+          <figure class="dec-f">
+            <ol class="chain" aria-label="NAS1 copia a NAS2 y a Backblaze B2">
+              <li><b>NAS1</b><span>sala técnica · espejo 2 × 4 TB</span></li>
+              <li><b>NAS2</b><span>gerencia · con UPS propia</span></li>
+              <li><b>B2</b><span>nube · fuera del edificio</span></li>
+            </ol>
+          </figure>
+        </article>
+
+        <article class="dec">
+          <div class="dec-t"><span>3.5</span><h3>Teléfonos que no dependen de internet</h3><p>Una mini PC con Issabel atiende los siete internos por PoE. Si se corta internet, se siguen llamando entre sí.</p></div>
+          <figure class="dec-f">
+            <div class="exts" id="exts"></div>
+          </figure>
+        </article>
+      </section>
+
+      <!-- 04 presupuesto -->
+      <section class="sec" id="presupuesto">
+        <header class="sec-h"><span class="num">04</span><h2>Presupuesto</h2></header>
+        <div class="total">
+          <div>
+            <p class="kicker">Inversión del cliente</p>
+            <b class="money" id="total">$12.010.537</b>
+            <label class="tog"><input type="checkbox" id="labor" checked /><span></span>Incluir mano de obra</label>
+          </div>
+          <div class="stack" id="stack" aria-hidden="true"></div>
+          <ul class="stack-legend" id="legend"></ul>
+        </div>
+        <div class="ledger">
+          <div class="ledger-h">
+            <div class="tabs" role="tablist" aria-label="Rubro">
+              <button role="tab" aria-selected="true" data-tab="equipos">Equipos</button>
+              <button role="tab" aria-selected="false" data-tab="materiales">Materiales</button>
+              <button role="tab" aria-selected="false" data-tab="herramientas">Herramientas</button>
+            </div>
+            <span class="kicker" id="ledger-sum"></span>
+          </div>
+          <table class="lt"><thead><tr><th>Ítem</th><th>Cant.</th><th>Unitario</th><th>Subtotal</th></tr></thead><tbody id="rows"></tbody></table>
+          <p class="fine" id="list-note"></p>
+        </div>
+        <div class="plan8">
+          <div class="plan8-h"><h3>Ocho jornadas, tres personas</h3><p class="kicker"><span data-count="144">144</span> horas-persona · $15.000 la hora</p></div>
+          <div class="gantt" id="gantt"></div>
+          <ul class="team" id="team"></ul>
+        </div>
+        <p class="fine" id="budget-note"></p>
+      </section>
+
+      <!-- 05 la demo -->
+      <section class="sec" id="demo">
+        <header class="sec-h"><span class="num">05</span><h2>La demo</h2></header>
+        <p class="lede">Una sola regla: <b>si no está en el TP, no está en la escena.</b> Cada cable, puerto, rack e IP sale del documento. El resto (muebles, luz, texturas) es escenografía.</p>
+        <div class="shots">
+          <figure class="plate s-wide"><img src="/landing/shot-fp.webp" alt="Vista en primera persona del área de escritorios" width="1600" height="900" loading="lazy" decoding="async" /><figcaption><span>Fig. 2</span> Primera persona: WASD para caminar, E para inspeccionar cualquier equipo.</figcaption></figure>
+          <figure class="plate"><img src="/landing/shot-rack.webp" alt="Rack R1 inspeccionado, con sus equipos" width="1200" height="900" loading="lazy" decoding="async" /><figcaption><span>Fig. 3</span> R1 abierto: cada equipo dibujado según su hoja de datos.</figcaption></figure>
+          <figure class="plate"><img src="/landing/shot-lab.webp" alt="Laboratorio con la topología de la red" width="1200" height="900" loading="lazy" decoding="async" /><figcaption><span>Fig. 4</span> Laboratorio: la misma red como topología, con ping y traceroute.</figcaption></figure>
+        </div>
+        <div class="how">
+          <ol class="steps" id="steps"></ol>
+          <div class="term" aria-label="Registro del proceso">
+            <div class="term-h"><span>red-alvarez-3d</span><span id="term-n"></span></div>
+            <pre id="term" aria-live="off"></pre>
+          </div>
+        </div>
+        <ul class="facts">
+          <li><b>0</b><span>servidores: todo corre en el navegador</span></li>
+          <li><b>Offline</b><span>se instala y anda sin conexión</span></li>
+          <li><b>8</b><span>misiones con fallas reales del estudio</span></li>
+          <li><b>1</b><span>link para abrirla: <a href="/demo/">red-alvarez-3d.vercel.app/demo</a></span></li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="colophon">
+      <div class="col-a">
+        <p class="kicker">Equipo</p>
+        <ul class="crew" id="crew"></ul>
+      </div>
+      <div class="col-b">
+        <p class="kicker">Archivos</p>
+        <ul class="links">
+          <li><a href="/demo/">Recorrido 3D</a></li>
+          <li><a href="/TP-Redes-FINAL.pdf" target="_blank" rel="noopener">TP en PDF</a></li>
+          <li><a href="https://github.com/LEAN-EnLAN/red-alvarez-3d" target="_blank" rel="noopener">Código fuente</a></li>
+        </ul>
+      </div>
+      <figure class="col-qr"><img src="/qr.svg" alt="Código QR al recorrido 3D" width="112" height="112" loading="lazy" /><figcaption>Desde el celular</figcaption></figure>
+      <p class="fine col-c">Colegio San José · Redes 2026. Oficina y cliente ficticios. Precios en pesos argentinos consultados el 19/11/2026.</p>
+    </footer>
+
+    <script type="module" src="/src/landing/landing.js"></script>
   </body>
 </html>

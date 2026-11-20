@@ -19,28 +19,15 @@ const PH_MODELS = {
   potted_plant_04: {},
   potted_plant_02: { simplify: 0.2 },
   modern_arm_chair_01: {},
-  sofa_03: {},
   wall_clock: {},
   fire_alarm: {},
-  korean_fire_extinguisher_01: {},
-  hanging_picture_frame_01: {},
   hanging_picture_frame_02: {},
-  office_notepads: {},
-  stationery_supplies: {},
-  binder_notebook: { simplify: 0.4 },
-  drawer_cabinet: { simplify: 0.5 },
   steel_frame_shelves_03: {},
-  side_table_01: {},
   coffee_table_round_01: {},
-  projector_screen: {},
   ceramic_vase_01: {},
 };
 const PH_TEXTURES = {
-  marble_01: { size: 1024 },
-  laminate_floor_02: { size: 1024 },
-  kitchen_wood: { size: 512 },
   plastered_wall_04: { size: 512 },
-  fabric_pattern_07: { size: 512 },
 };
 // Sketchfab (descarga con token). Licencias verificadas vía API.
 const SKETCHFAB = {

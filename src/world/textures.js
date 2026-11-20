@@ -5,7 +5,15 @@ const BASE = import.meta.env.BASE_URL + 'assets/textures/';
 let maxAniso = 4;
 export const setMaxAniso = (n) => (maxAniso = n);
 
-export function pbrSet(name, { repeat = 1, color = true } = {}) {
+// gen: la imagen llega después desde assets/gen (genwire la cambia): no se baja nada acá
+export function pbrSet(name, { repeat = 1, color = true, gen = false } = {}) {
+  if (gen) {
+    const c = document.createElement('canvas'); c.width = c.height = 2;
+    const g = c.getContext('2d'); g.fillStyle = '#c9c3b8'; g.fillRect(0, 0, 2, 2);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = maxAniso; t.colorSpace = THREE.SRGBColorSpace; t.repeat.set(repeat, repeat);
+    return { map: t, normalMap: null, roughnessMap: null };
+  }
   const load = (suffix, srgb) => {
     const t = loader.load(`${BASE}${name}_${suffix}.jpg`);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;

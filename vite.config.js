@@ -2,16 +2,18 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  define: { __PWA__: JSON.stringify(!process.env.ARTIFACT) },
   // Vercel: landing en /, demo en /demo/. Artifact (vista previa): solo la demo, rutas relativas.
   base: process.env.ARTIFACT ? './' : '/',
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 900,
-    rollupOptions: { input: process.env.ARTIFACT ? { demo: 'demo/index.html' } : { main: 'index.html', demo: 'demo/index.html' } },
+    rollupOptions: { input: process.env.ARTIFACT || process.env.DEMO_ONLY ? { demo: 'demo/index.html' } : { main: 'index.html', demo: 'demo/index.html' } },
   },
   plugins: [
     process.env.ARTIFACT ? null : VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: null, // el service worker lo registra solo la demo: la landing queda liviana
       includeAssets: ['icons/*.png'],
       manifest: {
         name: 'Red Alvarez 3D · TP Redes 2026',

@@ -23,8 +23,8 @@ export function buildBuilding(scene, colliders) {
   const cutMaterials = new Set();
 
   // ── materiales ──
-  const tile = pbrSet('marble_01', { repeat: 1 });
-  const wood = pbrSet('laminate_floor_02', { repeat: 1 });
+  const tile = pbrSet('marble_01', { repeat: 1, gen: true });
+  const wood = pbrSet('laminate_floor_02', { repeat: 1, gen: true });
   const plaster = pbrSet('plastered_wall_04', { repeat: 1, color: false });
   const M = {
     tile: new THREE.MeshStandardMaterial({ ...tile, roughness: 0.8, color: 0xf7f4ef }),

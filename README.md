@@ -2,7 +2,9 @@
 
 Recorrido 3D interactivo de la red de la oficina del TP final de Redes (Colegio San José, 2026). Autores: Tomás Volonté, Juan Manuel Goiburú y Leandro Palombo.
 
-Es una PWA en three.js que corre entera en el navegador. Funciona en desktop (WASD + mouse) y en celular (joystick táctil). Después de la primera visita queda disponible sin conexión, así que sirve para presentar con un proyector sin wifi.
+El sitio tiene dos partes: **la landing** (`/`), que presenta el proyecto, sus decisiones y el presupuesto, y **la demo** (`/demo/`), una PWA en three.js que corre entera en el navegador.
+
+La demo funciona en desktop (WASD + mouse) y en celular (joystick táctil). Después de la primera visita queda disponible sin conexión, así que sirve para presentar con un proyector sin wifi.
 
 ## Qué incluye
 
@@ -13,7 +15,6 @@ Es una PWA en three.js que corre entera en el navegador. Funciona en desktop (WA
 - **Fichas (E)**: cada PC, teléfono, boca, puerto, rack y UPS tiene su ficha con IP, VLAN, boca, puerto y metros. El botón "Ver recorrido" ilumina el cable hasta el rack.
 - **Presentación (P)**: las 11 páginas del TP, con la cámara volando a cada lugar (plano, diagrama, VLANs, racks, bocas, servicios, Gantt y presupuestos).
 - **Laboratorio (L)**: bloques estilo Scratch, una consola de bajo nivel (CLI JetStream de los switches, cmd en las PCs, Asterisk en la PBX), la topología en vivo y 8 misiones. Los paquetes del simulador viajan por los cables reales del mundo 3D.
-- **Minijuego T568B** mientras carga.
 
 `src/data/tp.js` es la fuente única de verdad: todos los datos del TP están ahí y todo lo demás lee de ese archivo.
 

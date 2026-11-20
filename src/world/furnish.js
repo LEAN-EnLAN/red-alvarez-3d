@@ -88,7 +88,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
     return { pos, dir };
   };
 
-  const woodTop = pbrSet('kitchen_wood', { repeat: 1 });
+  const woodTop = pbrSet('kitchen_wood', { repeat: 1, gen: true });
   const cabMat = new THREE.MeshStandardMaterial({ color: 0xe9e6df, roughness: 0.6 });
   const cabTop = new THREE.MeshStandardMaterial({ map: woodTop.map, roughness: 0.55 });
   const hasSF = (n) => manifest[`sf_${n}`];
