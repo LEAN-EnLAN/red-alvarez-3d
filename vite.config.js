@@ -5,7 +5,7 @@ export default defineConfig({
   base: './',
   build: { target: 'es2022', chunkSizeWarningLimit: 900 },
   plugins: [
-    VitePWA({
+    process.env.ARTIFACT ? null : VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/*.png'],
       manifest: {

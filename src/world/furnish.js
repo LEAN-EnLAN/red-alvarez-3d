@@ -11,6 +11,7 @@ import { pbrSet } from './textures.js';
 const H = META.size.h;
 const PLENUM = H + 0.14;
 const MODELS = import.meta.env.BASE_URL + 'assets/models/';
+const EXT = import.meta.env.VITE_MODEL_EXT || '.glb'; // la vista previa en Artifact usa glTF JSON
 
 export async function furnish(scene, colliders, { manager, quality }) {
   const root = new THREE.Group();
@@ -33,7 +34,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
   try { manifest = await (await fetch(MODELS + 'manifest.json')).json(); } catch {}
   const cache = new Map();
   const loadGLB = (name) => {
-    if (!cache.has(name)) cache.set(name, gltf.loadAsync(MODELS + name + '.glb').then((g) => { g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = quality.shadows; o.receiveShadow = true; } }); return g.scene; }).catch(() => null));
+    if (!cache.has(name)) cache.set(name, (EXT === '.json' ? loadEmbedded(gltf, MODELS + name + EXT) : gltf.loadAsync(MODELS + name + EXT)).then((g) => { g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = quality.shadows; o.receiveShadow = true; } }); return g.scene; }).catch(() => null));
     return cache.get(name);
   };
   const prop = async (name, x, z, { y = 0, rot = 0, scale = 1, collide = false, pad = 0 } = {}) => {
@@ -431,6 +432,27 @@ export async function furnish(scene, colliders, { manager, quality }) {
   await Promise.all(deco.map(([n, x, z, o]) => prop(n, x, z, o)));
 
   return { root, interact, pickables, anchors, segments, xray, poles, poleMat, leds, cableMeshes, racks, screens, deskBuilt };
+}
+
+// glTF JSON con el binario en base64 → GLB en memoria (sin fetch de data: URIs)
+async function loadEmbedded(loader, url) {
+  const json = await (await fetch(url)).json();
+  const uri = json.buffers?.[0]?.uri || '';
+  const b64 = uri.slice(uri.indexOf(',') + 1);
+  const raw = atob(b64);
+  const bin = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i);
+  delete json.buffers[0].uri;
+  const enc = new TextEncoder().encode(JSON.stringify(json));
+  const jl = (enc.length + 3) & ~3, bl = (bin.length + 3) & ~3;
+  const out = new Uint8Array(12 + 8 + jl + 8 + bl);
+  const dv = new DataView(out.buffer);
+  dv.setUint32(0, 0x46546c67, true); dv.setUint32(4, 2, true); dv.setUint32(8, out.length, true);
+  dv.setUint32(12, jl, true); dv.setUint32(16, 0x4e4f534a, true);
+  out.fill(0x20, 20, 20 + jl); out.set(enc, 20);
+  dv.setUint32(20 + jl, bl, true); dv.setUint32(24 + jl, 0x004e4942, true);
+  out.set(bin, 28 + jl);
+  return loader.parseAsync(out.buffer, url.slice(0, url.lastIndexOf('/') + 1));
 }
 
 // Lámina "Diagrama de red" sobre la mesa de reunión (contenido de la p.3)

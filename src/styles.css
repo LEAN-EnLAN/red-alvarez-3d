@@ -2,6 +2,7 @@
 @import '@fontsource-variable/jetbrains-mono';
 
 :root {
+  color-scheme: dark;
   --bg: #0b1220;
   --panel: rgba(13, 22, 38, 0.82);
   --panel-solid: #0f1a2c;
