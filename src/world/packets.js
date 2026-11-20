@@ -43,7 +43,7 @@ export class Packets {
     const col = new THREE.Color(color);
     const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true, toneMapped: false }));
     spr.scale.setScalar(0.16);
-    spr.renderOrder = 10;
+    spr.renderOrder = 19;
     const core = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
     spr.add(core);
     core.scale.setScalar(1 / 0.16);
@@ -53,12 +53,12 @@ export class Packets {
     const trailGeo = new THREE.BufferGeometry();
     trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
     const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.8, depthTest: false, toneMapped: false }));
-    trail.renderOrder = 9;
+    trail.renderOrder = 18;
     trail.frustumCulled = false;
     this.scene.add(trail);
     // resaltar el cable por donde viaja
     const glowTube = tubeFrom(pts, 0.012, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.35, depthTest: false, toneMapped: false, blending: THREE.AdditiveBlending }), 5);
-    glowTube.renderOrder = 8;
+    glowTube.renderOrder = 17;
     this.flash.add(glowTube);
     this.live.push({ pts, cum, L, dur, t: 0, spr, trail, hist: [], ok, glowTube, col });
   }
@@ -66,7 +66,7 @@ export class Packets {
   burst(pos, col) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col, blending: THREE.AdditiveBlending, depthTest: false, transparent: true, toneMapped: false }));
     s.position.copy(pos);
-    s.renderOrder = 11;
+    s.renderOrder = 20;
     this.scene.add(s);
     this.live.push({ burst: true, spr: s, t: 0, dur: 0.7 });
   }

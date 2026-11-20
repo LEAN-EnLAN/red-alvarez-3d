@@ -61,7 +61,7 @@ renderer.setPixelRatio(Q.dpr);
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;
-renderer.toneMappingExposure = 0.88;
+renderer.toneMappingExposure = Q.ao ? 0.88 : 1.05; // con AO/bloom (alta) la escena ya se ve más luminosa
 renderer.shadowMap.enabled = Q.shadows;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.localClippingEnabled = true;
@@ -126,6 +126,7 @@ bus.on('ui:quality', ({ level }) => {
   qName = level; Q = QUALITY[level];
   try { localStorage.setItem('alvarez.quality', level); } catch {}
   renderer.setPixelRatio(Q.dpr);
+  renderer.toneMappingExposure = Q.ao ? 0.88 : 1.05;
   renderer.shadowMap.enabled = Q.shadows;
   sun.castShadow = Q.shadows;
   sun.shadow.mapSize.set(Q.shadowMap, Q.shadowMap);
@@ -189,26 +190,38 @@ function updateFly(dt) {
 
 // ───────── escena: interior / maqueta / rayos X ─────────
 // view: 'interior' (cielorraso, ciudad por la ventana), 'xray' (losa visible, cables), 'studio' (maqueta blanca, paredes cortadas)
-function setView(view) {
-  const studio = view === 'studio';
-  building.ceiling.visible = view === 'interior';
-  building.panels.visible = view === 'interior';
-  building.roof.visible = view === 'xray';
-  building.city.visible = !studio;
-  building.slab.visible = studio;
-  building.setCut(studio);
-  scene.background.copy(studio ? STUDIO : new THREE.Color(0xdfe6ee));
-  scene.fog = studio ? new THREE.Fog(STUDIO, 26, 62) : null;
+let wantedView = 'interior', appliedView = null, xrayCables = false;
+function setView(view) { wantedView = view; applyView(); }
+// La vista efectiva depende de dónde está la cámara: por encima del cielorraso siempre se ve la maqueta
+// (sin paneles de luz flotando, sin la foto de la ciudad y con las paredes cortadas).
+function applyView() {
+  const above = camera.position.y > 2.72;
+  const view = above && wantedView !== 'studio' ? 'studio' : wantedView;
+  if (view !== appliedView) {
+    appliedView = view;
+    const studio = view === 'studio';
+    building.ceiling.visible = view === 'interior';
+    building.panels.visible = view === 'interior';
+    building.roof.visible = view === 'xray';
+    building.city.visible = !studio;
+    building.slab.visible = studio;
+    building.setCut(studio);
+    scene.background.copy(studio ? STUDIO : new THREE.Color(0xdfe7ee));
+    scene.fog = studio ? new THREE.Fog(STUDIO, 26, 62) : null;
+    if (world) {
+      world.poleMat.opacity = view === 'xray' ? 0.25 : 1;
+      world.poleMat.depthWrite = view !== 'xray';
+    }
+  }
   if (world) {
-    world.xray.visible = xray || view === 'xray';
-    world.poleMat.opacity = view === 'xray' ? 0.25 : 1;
-    world.poleMat.depthWrite = view !== 'xray';
+    const show = xray || wantedView === 'xray' || xrayCables;
+    world.xray.visible = show;
   }
 }
 function setXray(on) {
   xray = on;
   if (mode === 'explore' || mode === 'inspect') setView(on ? 'xray' : 'interior');
-  else if (world) world.xray.visible = on || mode === 'present';
+  else applyView();
   syncHud();
   bus.emit('xray', { on });
 }
@@ -257,7 +270,7 @@ const presenter = new Presenter({
     info.close();
     const doll = s.view === 'dollhouse';
     setView(doll ? 'studio' : s.xray ? 'xray' : 'interior');
-    if (world) world.xray.visible = !!s.xray || xray;
+    xrayCables = !!s.xray; applyView();
     syncHud();
     flyTo(s.cam.pos, s.cam.target, 1.6, () => {
       if (s.route) highlightRoute(s.route);
@@ -265,7 +278,7 @@ const presenter = new Presenter({
     });
     if (s.labels) showPlanLabels(); else clearPlanLabels();
   },
-  onExit: () => enterExplore(),
+  onExit: () => { xrayCables = false; enterExplore(); },
 });
 
 bus.on('ui:mode', ({ mode: m }) => {
@@ -337,6 +350,45 @@ bus.on('info:close', () => {
 });
 bus.on('ui:use', () => useTarget(interactor?.current?.id));
 
+// ───────── foco en los cables: todo lo demás se oscurece y los cables brillan ─────────
+const dimMat = new THREE.ShaderMaterial({
+  transparent: true, depthTest: false, depthWrite: false, toneMapped: false,
+  uniforms: { uA: { value: 0 } },
+  vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: 'uniform float uA; void main(){ gl_FragColor = vec4(0.02, 0.035, 0.07, uA); }',
+});
+const dim = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), dimMat);
+dim.frustumCulled = false; dim.renderOrder = 14; dim.visible = false;
+scene.add(dim);
+function updateDim(dt) {
+  const want = routeFx ? 0.62 : (xray && (mode === 'explore' || mode === 'inspect')) || xrayCables ? 0.38 : 0;
+  dimMat.uniforms.uA.value += (want - dimMat.uniforms.uA.value) * (1 - Math.exp(-dt * 6));
+  dim.visible = dimMat.uniforms.uA.value > 0.004;
+}
+
+// ───────── salas cerradas: su contenido solo se dibuja si estás adentro o la puerta está abierta ─────────
+const CLOSED_ROOMS = ['gerencia', 'escritorios', 'recepcion', 'reunion', 'tecnica'];
+let roomOf = null;
+function cullRooms() {
+  const exploring = mode === 'explore' || mode === 'inspect';
+  if (!roomOf) {
+    if (!exploring) return;
+    roomOf = new Map();
+    const b = new THREE.Box3(), c = new THREE.Vector3();
+    for (const o of world.root.children) {
+      if (o === world.xray) continue;
+      b.setFromObject(o); if (b.isEmpty()) continue;
+      b.getCenter(c);
+      const r = roomAt(c.x, c.z);
+      if (r && CLOSED_ROOMS.includes(r.id)) roomOf.set(o, r.id);
+    }
+  }
+  const here = roomAt(player.pos.x, player.pos.z)?.id;
+  const open = new Set();
+  for (const dr of building.doors) if (dr.t > 0.04) { const rid = dr.id.replace('d-', '').replace('entrada', 'recepcion'); open.add(rid); }
+  for (const [o, rid] of roomOf) o.visible = !exploring || rid === here || open.has(rid);
+}
+
 // ───────── recorrido del cable: cinemática (alejar → dibujar → volver) ─────────
 let routeFx = null, cine = null;
 function makeRouteTube(dev) {
@@ -344,7 +396,12 @@ function makeRouteTube(dev) {
   const o = OUTLETS.find((q) => q.dev === dev);
   const col = o.trunk ? TRUNK_COLOR : VLANS[o.vlan].color;
   const mesh = tubeFrom(pts, 0.02, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.95, depthTest: false, toneMapped: false }), 8);
-  mesh.renderOrder = 15;
+  mesh.renderOrder = 16;
+  // halo para que el cable "brille" sobre la escena oscurecida
+  const halo = tubeFrom(pts, 0.07, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }), 8);
+  halo.renderOrder = 15;
+  mesh.add(halo);
+  mesh.userData.halo = halo;
   return { mesh, pts, col, o };
 }
 function clearRoute() { if (routeFx) { scene.remove(routeFx.mesh); routeFx.mesh.geometry.dispose(); routeFx = null; } }
@@ -535,6 +592,9 @@ renderer.setAnimationLoop(() => {
   if (mode === 'explore' && !labOpen && !pause.isOpen) player.update(dt, input);
   else input.consumeLook();
   updateFly(Math.min(raw, 0.25));
+  applyView();
+  updateDim(dt);
+  if (world && frame % 15 === 0) cullRooms();
   if (orbit.enabled) orbit.update();
   // puertas: se abren al acercarse; en vistas generales quedan abiertas
   const evs = building.updateDoors(dt, mode === 'explore' || mode === 'inspect' ? player.pos : camera.position, mode === 'orbit' || mode === 'present' || mode === 'cinematic');
@@ -559,7 +619,9 @@ renderer.setAnimationLoop(() => {
   if (routeFx) {
     routeFx.t += dt;
     const k = Math.min(1, routeFx.t / routeFx.grow);
-    routeFx.mesh.geometry.setDrawRange(0, Math.floor(ease(k) * routeFx.total / 3) * 3);
+    const dr = Math.floor(ease(k) * routeFx.total / 3) * 3;
+    routeFx.mesh.geometry.setDrawRange(0, dr);
+    routeFx.mesh.userData.halo?.geometry.setDrawRange(0, Math.floor(ease(k) * routeFx.mesh.userData.halo.geometry.index.count / 3) * 3);
     routeFx.mesh.material.opacity = k < 1 ? 0.95 : 0.6 + 0.3 * Math.cos((routeFx.t - routeFx.grow) * 4);
     if (routeFx.t > 9 && mode !== 'cinematic') clearRoute();
   }

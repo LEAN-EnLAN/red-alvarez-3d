@@ -252,8 +252,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
       anchors.set(`jackback:${oT.label}`, worldPort(plate, 'back'));
     }
     deskBuilt.set(name, { desk, pc, mon, tel, plate, pos: [x, z], th });
-    p = at(-0.5, -0.17);
-    propOn(DESKS.indexOf(d) % 2 ? 'office_notepads' : 'stationery_supplies', p[0], p[1], top, th + DESKS.indexOf(d) * 0.4);
+
   }
 
   // mueble bajo genérico orientado (cajonera / credenza)
@@ -394,7 +393,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
   const color = (o) => (o.trunk ? TRUNK_COLOR : VLANS[o.vlan]?.color || '#ffffff');
   const xmats = new Map();
   const xmat = (c) => {
-    if (!xmats.has(c)) xmats.set(c, new THREE.MeshBasicMaterial({ color: c, toneMapped: false, transparent: true, opacity: 0.95 }));
+    if (!xmats.has(c)) xmats.set(c, new THREE.MeshBasicMaterial({ color: c, toneMapped: false, transparent: true, opacity: 0.95, depthTest: false }));
     return xmats.get(c);
   };
   const cordMats = new Map();
@@ -470,6 +469,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
     const hidden = roundPolyline(full.slice(Math.max(0, hiddenStart)), 0.1, 3);
     const tube = tubeFrom(hidden, 0.007, xmat(color(o)), 5);
     tube.userData.cable = o.dev;
+    tube.renderOrder = 15;
     xray.add(tube);
     cableMeshes.set(`cable:${o.dev}`, [tube, visibleCord].filter(Boolean));
   });
@@ -491,6 +491,7 @@ export async function furnish(scene, colliders, { manager, quality }) {
     const smooth = roundPolyline(dedupe(pts), 0.15, 4);
     segments.set('fiber', smooth);
     const tube = tubeFrom(roundPolyline(dedupe(pts.slice(c1 ? c1.length : 1, pts.length - (c2 ? c2.length : 1))), 0.15, 4), 0.012, xmat(FIBER_COLOR), 6);
+    tube.renderOrder = 15;
     xray.add(tube);
     cableMeshes.set('fiber', [tube]);
   }
@@ -606,7 +607,6 @@ export async function furnish(scene, colliders, { manager, quality }) {
   jobs.push(deco('hanging_picture_frame_01', 6.2, 10.1, { y: 1.5, rot: Math.PI / 2, snap: [['x', 6, 1, 0.002]], collide: false }));
   jobs.push(deco('potted_plant_02', 11.55, 11.55, { snap: [['x', 12, -1], ['z', 12, -1]] }));
   // carpeta sobre el escritorio de gerencia
-  { const g = deskBuilt.get('PC06'); const [x, z] = Lw(g.pos[0], g.pos[1], g.th, -0.5, 0.1); jobs.push(propOn('binder_notebook', x, z, 0.75, g.th + 0.4)); }
   await Promise.all(jobs);
 
   // Auditoría de superposiciones (cajas envolventes): objetos sólidos entre sí y contra paredes

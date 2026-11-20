@@ -326,8 +326,33 @@ export function buildBuilding(scene, colliders) {
   root.add(panels);
 
   // ── exterior ──
-  const city = new THREE.Mesh(new THREE.PlaneGeometry(40, 14), new THREE.MeshBasicMaterial({ map: cityTexture(), toneMapped: false }));
-  city.position.set(8, 3, -9);
+  // Exterior: foto de la ciudad sobre un domo de cielo con bruma. Los bordes de la foto se funden en la
+  // bruma (perspectiva atmosférica), así nunca se ve dónde termina la imagen al mirar por la ventana.
+  const HAZE = new THREE.Color(0xdfe7ee);
+  const cityMat = new THREE.MeshBasicMaterial({ map: cityTexture(), toneMapped: false, fog: false });
+  cityMat.onBeforeCompile = (sh) => {
+    sh.uniforms.uHaze = { value: HAZE };
+    sh.fragmentShader = sh.fragmentShader
+      .replace('void main() {', 'uniform vec3 uHaze;\nvoid main() {')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        vec2 q = vMapUv;
+        float edge = smoothstep(0.0, 0.12, q.x) * smoothstep(1.0, 0.88, q.x) * smoothstep(0.0, 0.18, q.y) * smoothstep(1.0, 0.9, q.y);
+        diffuseColor.rgb = mix(uHaze, mix(diffuseColor.rgb, uHaze, 0.16), edge);`);
+  };
+  const city = new THREE.Group();
+  const cityPhoto = new THREE.Mesh(new THREE.PlaneGeometry(46, 16), cityMat);
+  cityPhoto.position.set(8, 2.4, -12);
+  city.add(cityPhoto);
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(70, 32, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { uTop: { value: new THREE.Color(0xa9c8e6) }, uHaze: { value: HAZE }, uLow: { value: new THREE.Color(0xc5ccd3) } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: 'uniform vec3 uTop; uniform vec3 uHaze; uniform vec3 uLow; varying vec3 vP; void main(){ float h = vP.y; vec3 c = h > 0.0 ? mix(uHaze, uTop, smoothstep(0.05, 0.6, h)) : mix(uHaze, uLow, smoothstep(0.0, 0.25, -h)); gl_FragColor = vec4(c, 1.0); }',
+  }));
+  sky.position.set(8, 0, 6);
+  sky.renderOrder = -10;
+  city.add(sky);
+  city.material = cityMat; // compatibilidad: genwire reemplaza city.material.map
   root.add(city);
   // piso de estudio blanco (vista maqueta) — recibe sombras
   const slab = new THREE.Mesh(new THREE.CircleGeometry(120, 64), new THREE.MeshStandardMaterial({ color: 0xf1f2f4, roughness: 1 }));

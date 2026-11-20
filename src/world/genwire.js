@@ -186,11 +186,11 @@ async function applyMore({ building, world }) {
     if (!G.has(id)) continue;
     const im = await G.image(id); if (!im) continue;
     const w = 0.22, h = (w * im.naturalHeight) / im.naturalWidth;
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, Math.min(h, 0.3)), new THREE.MeshStandardMaterial({ map: G.texture(id, { wrap: false }), roughness: 0.8, transparent: !!G.info(id)?.transparent, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, Math.min(h, 0.28)), new THREE.MeshStandardMaterial({ map: G.texture(id, { wrap: false }), roughness: 0.8, transparent: !!G.info(id)?.transparent, alphaTest: 0.5 }));
     m.rotation.x = -Math.PI / 2; m.rotation.z = d.th + 0.12 * ((k % 3) - 1);
     const [cx, cz] = d.pos, th = d.th;
-    const lx = -0.6, lz = 0.13;
-    m.position.set(cx + lx * Math.cos(th) + lz * Math.sin(th), 0.7512, cz - lx * Math.sin(th) + lz * Math.cos(th));
+    const lx = -0.43, lz = 0.11; // a la izquierda del teclado, dentro de la tapa
+    m.position.set(cx + lx * Math.cos(th) + lz * Math.sin(th), 0.753, cz - lx * Math.sin(th) + lz * Math.cos(th));
     m.receiveShadow = true;
     world.root.add(m);
     n++;
